@@ -283,7 +283,7 @@ export function BirthForm() {
               {form.date} · {form.knownTime && form.time ? form.time : 'Time unknown'} · {form.place}
             </div>
             <a
-              href="#"
+              href="/dashboard"
               className="mt-10 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-[#D4AF37]/20"
             >
               Explore Your Chart <ArrowRight size={15} />
