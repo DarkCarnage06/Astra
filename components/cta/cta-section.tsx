@@ -11,7 +11,7 @@ export function CtaSection() {
         <h2 className="mx-auto max-w-3xl font-display text-3xl font-semibold tracking-[-0.02em] text-white sm:text-4xl lg:text-5xl">
           Ready to Explore Your Universe?
         </h2>
-        <a href="#" className="mt-10 inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-background transition hover:scale-[1.01]">
+        <a href="/birth-form" className="mt-10 inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-background transition hover:scale-[1.01]">
           Start Your Journey <ArrowRight size={16} />
         </a>
       </motion.div>

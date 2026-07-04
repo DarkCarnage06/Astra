@@ -26,7 +26,7 @@ export function HeroSection() {
             Understand your birth chart, ask meaningful questions and explore cosmic patterns through modern AI.
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.95, delay: 0.2 }} className="mt-10 flex flex-col items-center gap-4 sm:flex-row lg:items-start">
-            <a href="#cta" className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#D4AF37]/20">
+            <a href="/birth-form" className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#D4AF37]/20">
               Begin Journey <ArrowRight size={16} />
             </a>
             <a href="#features" className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white/90 transition hover:bg-white/10">
