@@ -1,0 +1,14 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+pydantic-settings>=2.6.0
+python-dotenv>=1.0.1
+loguru>=0.7.2
+tzdata>=2024.2
+# flatlib 0.2.3 pins pyswisseph==2.08.00-1
+pyswisseph==2.08.00-1
+flatlib>=0.2.3
+timezonefinder>=6.5.0
+geopy>=2.4.1
+pytest>=8.3.0
+httpx>=0.28.0

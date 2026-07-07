@@ -1,0 +1,5 @@
+# Install core API dependencies (no ephemeris compilation required)
+pip install -r requirements-core.txt
+
+# Install ephemeris stack (requires C++ build tools on Windows)
+pip install pyswisseph==2.08.00-1 flatlib>=0.2.3
