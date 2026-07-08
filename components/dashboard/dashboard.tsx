@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock,
   Compass,
@@ -12,58 +12,56 @@ import {
   Star,
   Sun,
   Zap,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+
+import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
+import { getCachedReadings, setCachedReadings } from '../../services/ai/cache';
+import { track, ANALYTICS_EVENTS } from '../../lib/analytics';
+import { THEME } from '../../config/theme';
+import { FEATURES } from '../../config/features';
+import { ALL_READING_THEMES } from '../../services/ai/promptBuilder';
+import type { BirthDetails, ChartResponse, PlanetInfo, AiReading, AiReadingSet, ReadingTheme } from '../../lib/types/chart';
 
 // ---------------------------------------------------------------------------
-// Mock data (replaces real API until backend is wired)
+// Icon map for planets
 // ---------------------------------------------------------------------------
-const PLANETS = [
-  { name: 'Sun',     sign: 'Scorpio',    degree: '14°22\'', house: '1st',  icon: Sun,           color: '#F59E0B' },
-  { name: 'Moon',    sign: 'Pisces',     degree: '29°07\'', house: '5th',  icon: Moon,          color: '#93C5FD' },
-  { name: 'Mercury', sign: 'Scorpio',    degree: '01°54\'', house: '1st',  icon: Zap,           color: '#A78BFA' },
-  { name: 'Venus',   sign: 'Libra',      degree: '22°31\'', house: '12th', icon: Gem,           color: '#F472B6' },
-  { name: 'Mars',    sign: 'Capricorn',  degree: '08°46\'', house: '3rd',  icon: FlameKindling, color: '#F87171' },
-  { name: 'Jupiter', sign: 'Sagittarius',degree: '17°03\'', house: '2nd',  icon: Globe2,        color: '#34D399' },
-  { name: 'Saturn',  sign: 'Aquarius',   degree: '05°19\'', house: '4th',  icon: Compass,       color: '#94A3B8' },
-];
-
-const INSIGHTS = [
-  {
-    title: 'Your Ascendant in Scorpio',
-    body: 'You project intensity and magnetism. Others sense your depth before you speak. This placement gives you extraordinary powers of perception — use them with compassion.',
-    icon: Star,
-    accent: '#D4AF37',
-  },
-  {
-    title: 'Moon in Pisces, 5th House',
-    body: 'Your emotional world is vast and creative. You feel deeply through art, play, and imagination. Romance carries a spiritual dimension for you.',
-    icon: Moon,
-    accent: '#38BDF8',
-  },
-  {
-    title: 'Jupiter in the 2nd House',
-    body: 'Abundance flows through your values and material world. You attract resources when you operate from your deepest philosophy.',
-    icon: Sparkles,
-    accent: '#34D399',
-  },
-];
-
-const TIMELINE_PHASES = [
-  { period: '2020–2022', title: 'Saturn Return',    body: 'A period of restructuring and discipline.',     color: '#94A3B8' },
-  { period: '2023–2025', title: 'Jupiter Expansion', body: 'Growth, travel, and philosophical awakening.',  color: '#34D399', active: true },
-  { period: '2026–2028', title: 'Rahu Transit',      body: 'Radical change and karmic acceleration.',      color: '#F59E0B' },
-  { period: '2029–2031', title: 'Venus Dasha',       body: 'Relationships, beauty, and creative harvest.', color: '#F472B6' },
-];
+const PLANET_ICONS: Record<string, React.ElementType> = {
+  Sun: Sun,
+  Moon: Moon,
+  Mercury: Zap,
+  Venus: Gem,
+  Mars: FlameKindling,
+  Jupiter: Globe2,
+  Saturn: Compass,
+  Rahu: Star,
+  Ketu: Star,
+};
 
 // ---------------------------------------------------------------------------
-// Sub-components
+// Ordinal suffix helper
+// ---------------------------------------------------------------------------
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
+
+// ---------------------------------------------------------------------------
+// Animation helpers
 // ---------------------------------------------------------------------------
 const fadeUp = (delay = 0) => ({
-  initial:    { opacity: 0, y: 20 },
-  animate:    { opacity: 1, y: 0 },
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5, delay },
 });
 
+// ---------------------------------------------------------------------------
+// StatCard
+// ---------------------------------------------------------------------------
 function StatCard({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
   return (
     <motion.div
@@ -80,9 +78,246 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
 }
 
 // ---------------------------------------------------------------------------
+// PlanetRow
+// ---------------------------------------------------------------------------
+function PlanetRow({ planet, index }: { planet: PlanetInfo; index: number }) {
+  const Icon = PLANET_ICONS[planet.name] ?? Star;
+  const color = THEME.planetColors[planet.name] ?? THEME.colors.gold;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -16 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.2 + index * 0.06, duration: 0.4 }}
+      className="group flex items-center gap-4 rounded-2xl border border-white/0 px-4 py-3 transition hover:border-white/10 hover:bg-white/5"
+    >
+      <div
+        className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10"
+        style={{ background: `${color}18`, color }}
+      >
+        <Icon size={15} />
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-white">
+          {planet.name}
+          {planet.retrograde && (
+            <span className="ml-1.5 text-[10px] text-[#F59E0B] opacity-80">℞</span>
+          )}
+        </p>
+        <p className="text-xs text-[#B8BCC8]">
+          {planet.sign} · {planet.degree.toFixed(2)}°
+        </p>
+      </div>
+      <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold text-[#B8BCC8]">
+        {ordinal(planet.house)} house
+      </span>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ReadingCard — AI insight card
+// ---------------------------------------------------------------------------
+function ReadingCard({ reading, index, streaming }: { reading: AiReading; index: number; streaming?: boolean }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1, duration: 0.45 }}
+      whileHover={{ y: -3 }}
+      className="group rounded-2xl border border-white/10 bg-black/20 p-5 transition hover:border-white/20"
+    >
+      <div className="mb-2.5 flex items-center gap-2.5">
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 text-base"
+          style={{ background: `${reading.color}18` }}
+        >
+          {reading.emoji}
+        </div>
+        <p className="text-sm font-semibold text-white">{reading.title}</p>
+        {streaming && (
+          <motion.span
+            animate={{ opacity: [1, 0.3, 1] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+            className="ml-auto h-1.5 w-1.5 rounded-full bg-[#D4AF37]"
+          />
+        )}
+      </div>
+      <p className="text-sm leading-6 text-[#B8BCC8]">{reading.description}</p>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ReadingCardSkeleton
+// ---------------------------------------------------------------------------
+function ReadingCardSkeleton({ index }: { index: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: index * 0.08 }}
+      className="rounded-2xl border border-white/10 bg-black/20 p-5"
+    >
+      <div className="mb-3 flex items-center gap-2.5">
+        <motion.div
+          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.2 }}
+          className="h-8 w-8 rounded-xl bg-white/10"
+        />
+        <motion.div
+          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.2 + 0.1 }}
+          className="h-4 w-40 rounded-lg bg-white/10"
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <motion.div
+          animate={{ opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.2 + 0.2 }}
+          className="h-3 w-full rounded bg-white/8"
+        />
+        <motion.div
+          animate={{ opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.2 + 0.3 }}
+          className="h-3 w-4/5 rounded bg-white/8"
+        />
+        <motion.div
+          animate={{ opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.2 + 0.4 }}
+          className="h-3 w-3/5 rounded bg-white/8"
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Dashboard
 // ---------------------------------------------------------------------------
 export function Dashboard() {
+  const router = useRouter();
+
+  const [birth, setBirth] = useState<BirthDetails | null>(null);
+  const [chart, setChart] = useState<ChartResponse | null>(null);
+  const [readings, setReadings] = useState<AiReading[]>([]);
+  const [readingsLoading, setReadingsLoading] = useState(false);
+  const [readingsError, setReadingsError] = useState<string | null>(null);
+  const [streamingTheme, setStreamingTheme] = useState<ReadingTheme | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // Load birth + chart from localStorage on mount
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const storedBirth = loadBirthDetails();
+    const storedChart = loadChartResponse();
+
+    if (!storedBirth || !storedChart) {
+      // No data — send back to form
+      router.replace('/birth-form');
+      return;
+    }
+
+    setBirth(storedBirth);
+    setChart(storedChart);
+    track(ANALYTICS_EVENTS.DASHBOARD_VIEWED);
+  }, [router]);
+
+  // ---------------------------------------------------------------------------
+  // Fetch AI readings once chart is available
+  // ---------------------------------------------------------------------------
+  const fetchReadings = useCallback(async (birthData: BirthDetails, chartData: ChartResponse) => {
+    if (!FEATURES.aiReadings) return;
+
+    // Check cache first
+    const cached = getCachedReadings(birthData);
+    if (cached) {
+      setReadings(cached.readings as AiReading[]);
+      return;
+    }
+
+    setReadingsLoading(true);
+    setReadingsError(null);
+    setReadings([]);
+
+    track(ANALYTICS_EVENTS.READING_STARTED, { themes: ALL_READING_THEMES.length });
+
+    const collected: AiReading[] = [];
+
+    for (const theme of ALL_READING_THEMES) {
+      setStreamingTheme(theme);
+      try {
+        const res = await fetch('/api/reading', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ theme, birth: birthData, chart: chartData, stream: false }),
+        });
+
+        if (res.ok) {
+          const reading: AiReading = await res.json();
+          collected.push(reading);
+          // Reveal card as it arrives (progressive)
+          setReadings((prev) => {
+            const updated = [...prev, reading].sort((a, b) => a.priority - b.priority);
+            return updated;
+          });
+        }
+      } catch {
+        // Skip failed theme — don't block the rest
+      }
+    }
+
+    setStreamingTheme(null);
+    setReadingsLoading(false);
+
+    if (collected.length === 0) {
+      setReadingsError('AI readings could not be generated. Your chart data is still accurate.');
+    } else {
+      // Cache the completed set
+      const readingSet: AiReadingSet = {
+        readings: collected,
+        generatedAt: new Date().toISOString(),
+        chartHash: '',
+      };
+      setCachedReadings(birthData, readingSet);
+      track(ANALYTICS_EVENTS.READING_COMPLETED, { count: collected.length });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (birth && chart) {
+      fetchReadings(birth, chart);
+    }
+  }, [birth, chart, fetchReadings]);
+
+  // ---------------------------------------------------------------------------
+  // Loading state (before localStorage hydration)
+  // ---------------------------------------------------------------------------
+  if (!birth || !chart) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
+          <Sparkles size={28} className="text-[#D4AF37]" />
+        </motion.div>
+      </div>
+    );
+  }
+
+  const sun = chart.planets.find((p) => p.name === 'Sun');
+  const moon = chart.planets.find((p) => p.name === 'Moon');
+
+  const elementMap: Record<string, string> = {
+    Aries: 'Fire', Leo: 'Fire', Sagittarius: 'Fire',
+    Taurus: 'Earth', Virgo: 'Earth', Capricorn: 'Earth',
+    Gemini: 'Air', Libra: 'Air', Aquarius: 'Air',
+    Cancer: 'Water', Scorpio: 'Water', Pisces: 'Water',
+  };
+
+  const dominant = elementMap[chart.sunSign] ?? 'Mixed';
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
   return (
     <div className="mx-auto max-w-7xl px-6 pb-24 pt-32 lg:px-8">
 
@@ -90,19 +325,25 @@ export function Dashboard() {
       <motion.div {...fadeUp(0)} className="mb-10">
         <p className="mb-2 text-sm uppercase tracking-[0.28em] text-[#D4AF37]">Your Cosmic Blueprint</p>
         <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">
-          Arjun Mehta
+          {birth.name}
         </h1>
         <p className="mt-2 text-[#B8BCC8]">
-          Born November 8 · 14:22 · Mumbai, India
+          Born {birth.date}
+          {birth.knownTime && birth.time ? ` · ${birth.time}` : ''}
+          {' · '}
+          {birth.displayPlace ?? birth.place}
+        </p>
+        <p className="mt-1 text-xs text-[#B8BCC8]/50">
+          {chart.ayanamsa} · Computed in {chart.metadata.calculationTimeMs?.toFixed(0) ?? '–'}ms
         </p>
       </motion.div>
 
       {/* ---- Stat row ---- */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Sun Sign"       value="Scorpio"     sub="Fixed Water"              color="#F59E0B" />
-        <StatCard label="Moon Sign"      value="Pisces"      sub="Mutable Water"             color="#93C5FD" />
-        <StatCard label="Ascendant"      value="Scorpio"     sub="1st House Rising"          color="#D4AF37" />
-        <StatCard label="Dominant"       value="Water"       sub="Sun + Moon + Jupiter"     color="#38BDF8" />
+        <StatCard label="Sun Sign" value={chart.sunSign} sub={`${elementMap[chart.sunSign] ?? ''} Sign`} color={THEME.signColors[chart.sunSign] ?? THEME.colors.gold} />
+        <StatCard label="Moon Sign" value={chart.moonSign} sub={`${chart.nakshatra.name} Nakshatra`} color={THEME.signColors[chart.moonSign] ?? THEME.colors.blue} />
+        <StatCard label="Ascendant" value={chart.ascendant.sign} sub={`${chart.ascendant.degree.toFixed(1)}° Rising`} color={THEME.colors.gold} />
+        <StatCard label="Mahadasha" value={chart.dasha.mahadasha} sub={`${chart.dasha.remainingYears.toFixed(1)} yrs remaining`} color={THEME.colors.green} />
       </div>
 
       {/* ---- Main grid ---- */}
@@ -115,90 +356,86 @@ export function Dashboard() {
             Planetary Positions
           </p>
           <div className="flex flex-col gap-3">
-            {PLANETS.map((planet, i) => {
-              const Icon = planet.icon;
-              return (
-                <motion.div
-                  key={planet.name}
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 + i * 0.06, duration: 0.4 }}
-                  className="group flex items-center gap-4 rounded-2xl border border-white/0 px-4 py-3 transition hover:border-white/10 hover:bg-white/5"
-                >
-                  <div
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10"
-                    style={{ background: `${planet.color}18`, color: planet.color }}
-                  >
-                    <Icon size={15} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-white">{planet.name}</p>
-                    <p className="text-xs text-[#B8BCC8]">{planet.sign} · {planet.degree}</p>
-                  </div>
-                  <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold text-[#B8BCC8]">
-                    {planet.house} house
-                  </span>
-                </motion.div>
-              );
-            })}
+            {chart.planets.map((planet, i) => (
+              <PlanetRow key={planet.name} planet={planet} index={i} />
+            ))}
           </div>
         </motion.section>
 
-        {/* Right — Insights + Timeline */}
+        {/* Right — AI Readings + Dasha Timeline */}
         <div className="flex flex-col gap-6">
 
-          {/* AI Insights */}
+          {/* AI Readings */}
           <motion.section {...fadeUp(0.2)} className="rounded-[32px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-xl">
-            <p className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
-              <span className="mr-2 opacity-60"><Sparkles size={11} className="inline" /></span>
-              AI Insights
-            </p>
+            <div className="mb-6 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
+                <span className="mr-2 opacity-60"><Sparkles size={11} className="inline" /></span>
+                AI Readings
+              </p>
+              {readingsLoading && (
+                <motion.span
+                  animate={{ opacity: [1, 0.4, 1] }}
+                  transition={{ duration: 1.4, repeat: Infinity }}
+                  className="text-xs text-[#B8BCC8]/60"
+                >
+                  {streamingTheme ? `Generating ${streamingTheme}…` : 'Loading…'}
+                </motion.span>
+              )}
+              {readingsError && !readingsLoading && (
+                <button
+                  onClick={() => birth && chart && fetchReadings(birth, chart)}
+                  className="flex items-center gap-1.5 text-xs text-[#D4AF37] hover:text-white transition"
+                >
+                  <RefreshCw size={11} /> Retry
+                </button>
+              )}
+            </div>
+
             <div className="flex flex-col gap-4">
-              {INSIGHTS.map((insight, i) => {
-                const Icon = insight.icon;
-                return (
-                  <motion.div
-                    key={insight.title}
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + i * 0.08, duration: 0.45 }}
-                    whileHover={{ y: -3 }}
-                    className="group rounded-2xl border border-white/10 bg-black/20 p-5 transition hover:border-white/20"
-                  >
-                    <div className="mb-2 flex items-center gap-2.5">
-                      <div
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10"
-                        style={{ background: `${insight.accent}18`, color: insight.accent }}
-                      >
-                        <Icon size={13} />
-                      </div>
-                      <p className="text-sm font-semibold text-white">{insight.title}</p>
-                    </div>
-                    <p className="text-sm leading-6 text-[#B8BCC8]">{insight.body}</p>
-                  </motion.div>
-                );
-              })}
+              {/* Show readings as they arrive */}
+              {readings.map((reading, i) => (
+                <ReadingCard
+                  key={reading.id}
+                  reading={reading}
+                  index={i}
+                  streaming={streamingTheme === reading.theme}
+                />
+              ))}
+
+              {/* Skeletons for pending readings */}
+              {readingsLoading && Array.from({ length: Math.max(0, 3 - readings.length) }).map((_, i) => (
+                <ReadingCardSkeleton key={i} index={i} />
+              ))}
+
+              {/* Error state */}
+              {readingsError && readings.length === 0 && (
+                <div className="flex items-start gap-2.5 rounded-2xl border border-red-400/20 bg-red-400/8 p-4 text-sm text-red-400">
+                  <AlertCircle size={15} className="mt-0.5 flex-shrink-0" />
+                  <span>{readingsError}</span>
+                </div>
+              )}
             </div>
           </motion.section>
 
-          {/* Life Timeline */}
+          {/* Dasha Timeline */}
           <motion.section {...fadeUp(0.25)} className="rounded-[32px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-xl">
             <p className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
               <span className="mr-2 opacity-60"><Clock size={11} className="inline" /></span>
-              Planetary Phases
+              Vimshottari Dasha
             </p>
             <div className="relative flex flex-col gap-0">
-              {/* Vertical line */}
               <div className="absolute bottom-4 left-[19px] top-4 w-px bg-white/10" />
-              {TIMELINE_PHASES.map((phase, i) => (
-                <motion.div
-                  key={phase.period}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.35 + i * 0.07, duration: 0.4 }}
-                  className="relative flex items-start gap-5 pb-6 last:pb-0"
-                >
-                  {/* Node */}
+              {[
+                {
+                  title: `${chart.dasha.mahadasha} Mahadasha`,
+                  sub: `${chart.dasha.antardasha} Antardasha`,
+                  period: `${chart.dasha.startDate} → ${chart.dasha.endDate}`,
+                  body: `${chart.dasha.remainingYears.toFixed(1)} years remaining in this phase.`,
+                  color: THEME.planetColors[chart.dasha.mahadasha] ?? THEME.colors.gold,
+                  active: true,
+                },
+              ].map((phase, i) => (
+                <div key={phase.title} className="relative flex items-start gap-5 pb-6 last:pb-0">
                   <div
                     className="relative z-10 mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border"
                     style={{
@@ -221,10 +458,11 @@ export function Dashboard() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-[#D4AF37]">{phase.period}</p>
+                    <p className="text-xs text-[#D4AF37]">{phase.sub}</p>
+                    <p className="text-xs text-[#B8BCC8]/60">{phase.period}</p>
                     <p className="mt-1 text-xs leading-5 text-[#B8BCC8]">{phase.body}</p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           </motion.section>
