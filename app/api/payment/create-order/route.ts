@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getRazorpay, PLANS, type PlanKey } from '../../../../lib/razorpay';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) {

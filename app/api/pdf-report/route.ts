@@ -10,6 +10,8 @@ import { buildChartContext } from '../../../prompts/system';
 import { MODEL_SETTINGS } from '../../../config/models';
 import type { BirthDetails, ChartResponse } from '../../../lib/types/chart';
 
+export const dynamic = 'force-dynamic';
+
 interface PdfReportRequest {
   birth: BirthDetails;
   chart: ChartResponse;

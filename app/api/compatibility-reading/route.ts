@@ -3,6 +3,8 @@ import { getOpenRouterClient } from '../../../services/ai/openrouter';
 import { formatReading } from '../../../services/ai/formatter';
 import type { ChartResponse } from '../../../lib/types/chart';
 
+export const dynamic = 'force-dynamic';
+
 interface CompatibilityRequest {
   chart1: ChartResponse;
   chart2: ChartResponse;

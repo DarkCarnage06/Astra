@@ -13,6 +13,8 @@ import { MODEL_SETTINGS } from '../../../config/models';
 import fs from 'fs';
 import path from 'path';
 
+export const dynamic = 'force-dynamic';
+
 // Rule-based intent classifier
 function classifyIntent(message: string): string {
   const msg = message.toLowerCase();

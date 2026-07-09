@@ -9,6 +9,8 @@ import crypto from 'crypto';
 import { db } from '../../../../lib/db';
 import { type PlanKey } from '../../../../lib/razorpay';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   const { userId: clerkId } = await auth();
   if (!clerkId) {
