@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useTransform, type MotionValue } from 'framer-motion';
+import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -161,8 +161,10 @@ function StarfieldCanvas({ mouseX, mouseY }: { mouseX: number; mouseY: number })
 // ---------------------------------------------------------------------------
 // Main Background component
 // ---------------------------------------------------------------------------
-export function Background({ scrollY }: { scrollY: MotionValue<number> }) {
+export function Background({ scrollY: externalScrollY }: { scrollY?: MotionValue<number> } = {}) {
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const { scrollY: internalScrollY } = useScroll();
+  const scrollY = externalScrollY ?? internalScrollY;
   const y = useTransform(scrollY, [0, 1200], [0, 160]);
   const scale = useTransform(scrollY, [0, 1200], [1, 1.02]);
 
