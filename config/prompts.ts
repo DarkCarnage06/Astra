@@ -42,3 +42,17 @@ Keep responses concise — 2 to 4 sentences per insight.`,
 } as const;
 
 export type ReadingTheme = (typeof PROMPT_CONFIG.readingOrder)[number];
+
+/**
+ * Shared rules injected into every AI reading prompt to ensure consistent JSON and formatting.
+ */
+export const PROMPT_RULES = `
+Rules:
+- Write in second person ("You are...", "Your nature...")
+- Maximum 4 sentences
+- Be specific to their chart — avoid generic horoscope language
+- Ground every claim in a personality or psychological lens
+- Do NOT predict the future or make promises
+
+Respond with ONLY a JSON object in this exact format:
+`.trim();

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useScroll } from 'framer-motion';
 import { Background } from '../components/background/background';
 import { CtaSection } from '../components/cta/cta-section';
 import { FeaturesSection } from '../components/features/features-section';
@@ -27,12 +28,14 @@ export default function Home() {
     setShowLoader(false);
   };
 
+  const { scrollY } = useScroll();
+
   return (
-    <main className="min-h-screen overflow-x-hidden">
+    <main id="main-content" className="min-h-screen overflow-x-hidden">
       {showLoader && <LoadingUniverse onComplete={handleLoadComplete} duration={3800} />}
-      <Background />
+      <Background scrollY={scrollY} />
       <Navbar />
-      <HeroSection />
+      <HeroSection scrollY={scrollY} />
       <FeaturesSection />
       <TimelineSection />
       <TestimonialsSection />

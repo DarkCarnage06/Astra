@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useTransform, type MotionValue } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -68,12 +68,29 @@ function StarfieldCanvas({ mouseX, mouseY }: { mouseX: number; mouseY: number })
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
     resize();
     window.addEventListener('resize', resize);
+
+    // When reduced motion is preferred, draw stars once (static, no twinkle/parallax)
+    if (prefersReducedMotion) {
+      const { width, height } = canvas;
+      for (const star of STARS) {
+        ctx.beginPath();
+        ctx.arc(star.x * width, star.y * height, star.radius, 0, Math.PI * 2);
+        let color = '255,255,255';
+        if (star.layer === 3 && star.tintSeed === 0) color = '56,189,248';
+        if (star.layer === 3 && star.tintSeed === 1) color = '212,175,55';
+        ctx.fillStyle = `rgba(${color},${star.opacity.toFixed(3)})`;
+        ctx.fill();
+      }
+      return () => window.removeEventListener('resize', resize);
+    }
 
     const draw = (timestamp: number) => {
       if (!startRef.current) startRef.current = timestamp;
@@ -136,6 +153,7 @@ function StarfieldCanvas({ mouseX, mouseY }: { mouseX: number; mouseY: number })
       ref={canvasRef}
       className="absolute inset-0 h-full w-full"
       style={{ opacity: 0.9 }}
+      aria-hidden="true"
     />
   );
 }
@@ -143,9 +161,8 @@ function StarfieldCanvas({ mouseX, mouseY }: { mouseX: number; mouseY: number })
 // ---------------------------------------------------------------------------
 // Main Background component
 // ---------------------------------------------------------------------------
-export function Background() {
+export function Background({ scrollY }: { scrollY: MotionValue<number> }) {
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
-  const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 1200], [0, 160]);
   const scale = useTransform(scrollY, [0, 1200], [1, 1.02]);
 

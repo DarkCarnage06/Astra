@@ -1,11 +1,10 @@
 'use client';
 
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useTransform, type MotionValue } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { OrbitalSystem } from '../orbital-system/orbital-system';
 
-export function HeroSection() {
-  const { scrollY } = useScroll();
+export function HeroSection({ scrollY }: { scrollY: MotionValue<number> }) {
   const heroY = useTransform(scrollY, [0, 600], [0, -60]);
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0.2]);
 

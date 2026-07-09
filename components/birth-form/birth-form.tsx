@@ -65,10 +65,10 @@ function FormField({ label, icon, children, index, error }: FieldProps) {
 // Input style helper
 // ---------------------------------------------------------------------------
 const inputClass =
-  'w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white placeholder-white/25 outline-none backdrop-blur-xl transition-all duration-200 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#D4AF37]/30 hover:border-white/20 text-sm';
+  'w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white placeholder-white/50 outline-none backdrop-blur-xl transition-all duration-200 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#D4AF37]/30 hover:border-white/20 text-sm';
 
 const inputErrorClass =
-  'w-full rounded-2xl border border-red-400/40 bg-white/5 px-5 py-4 text-white placeholder-white/25 outline-none backdrop-blur-xl transition-all duration-200 focus:border-red-400/60 focus:ring-1 focus:ring-red-400/30 text-sm';
+  'w-full rounded-2xl border border-red-400/40 bg-white/5 px-5 py-4 text-white placeholder-white/50 outline-none backdrop-blur-xl transition-all duration-200 focus:border-red-400/60 focus:ring-1 focus:ring-red-400/30 text-sm';
 
 // ---------------------------------------------------------------------------
 // Loading step labels

@@ -50,6 +50,14 @@ export const THEME = {
     Pisces:      '#A78BFA',
   } as Record<string, string>,
 
+  /** Element mapping per zodiac sign */
+  elementMap: {
+    Aries: 'Fire', Leo: 'Fire', Sagittarius: 'Fire',
+    Taurus: 'Earth', Virgo: 'Earth', Capricorn: 'Earth',
+    Gemini: 'Air', Libra: 'Air', Aquarius: 'Air',
+    Cancer: 'Water', Scorpio: 'Water', Pisces: 'Water',
+  } as Record<string, string>,
+
   /** Accent color per AI reading theme */
   readingColors: {
     personality:       '#D4AF37',

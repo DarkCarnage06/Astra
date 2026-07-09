@@ -15,7 +15,7 @@ import {
   RefreshCw,
   AlertCircle,
 } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
@@ -62,12 +62,13 @@ const fadeUp = (delay = 0) => ({
 // ---------------------------------------------------------------------------
 // StatCard
 // ---------------------------------------------------------------------------
-function StatCard({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
+const StatCard = memo(function StatCard({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
   return (
     <motion.div
       {...fadeUp(0.1)}
       whileHover={{ y: -4, scale: 1.01 }}
       transition={{ duration: 0.25 }}
+      style={{ willChange: 'transform' }}
       className="flex flex-col gap-1 rounded-[24px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl"
     >
       <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color }}>{label}</p>
@@ -75,12 +76,12 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
       <p className="text-xs text-[#B8BCC8]">{sub}</p>
     </motion.div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // PlanetRow
 // ---------------------------------------------------------------------------
-function PlanetRow({ planet, index }: { planet: PlanetInfo; index: number }) {
+const PlanetRow = memo(function PlanetRow({ planet, index }: { planet: PlanetInfo; index: number }) {
   const Icon = PLANET_ICONS[planet.name] ?? Star;
   const color = THEME.planetColors[planet.name] ?? THEME.colors.gold;
 
@@ -89,6 +90,7 @@ function PlanetRow({ planet, index }: { planet: PlanetInfo; index: number }) {
       initial={{ opacity: 0, x: -16 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.2 + index * 0.06, duration: 0.4 }}
+      style={{ willChange: 'transform, opacity' }}
       className="group flex items-center gap-4 rounded-2xl border border-white/0 px-4 py-3 transition hover:border-white/10 hover:bg-white/5"
     >
       <div
@@ -113,18 +115,19 @@ function PlanetRow({ planet, index }: { planet: PlanetInfo; index: number }) {
       </span>
     </motion.div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // ReadingCard — AI insight card
 // ---------------------------------------------------------------------------
-function ReadingCard({ reading, index, streaming }: { reading: AiReading; index: number; streaming?: boolean }) {
+const ReadingCard = memo(function ReadingCard({ reading, index, streaming }: { reading: AiReading; index: number; streaming?: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.45 }}
       whileHover={{ y: -3 }}
+      style={{ willChange: 'transform, opacity' }}
       className="group rounded-2xl border border-white/10 bg-black/20 p-5 transition hover:border-white/20"
     >
       <div className="mb-2.5 flex items-center gap-2.5">
@@ -146,12 +149,12 @@ function ReadingCard({ reading, index, streaming }: { reading: AiReading; index:
       <p className="text-sm leading-6 text-[#B8BCC8]">{reading.description}</p>
     </motion.div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // ReadingCardSkeleton
 // ---------------------------------------------------------------------------
-function ReadingCardSkeleton({ index }: { index: number }) {
+const ReadingCardSkeleton = memo(function ReadingCardSkeleton({ index }: { index: number }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -190,7 +193,7 @@ function ReadingCardSkeleton({ index }: { index: number }) {
       </div>
     </motion.div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Main Dashboard
@@ -295,20 +298,19 @@ export function Dashboard() {
   // ---------------------------------------------------------------------------
   if (!birth || !chart) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div
+        className="flex min-h-screen flex-col items-center justify-center gap-4"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading your chart"
+      >
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
           <Sparkles size={28} className="text-[#D4AF37]" />
         </motion.div>
+        <p className="text-sm text-[#B8BCC8]">Loading your chart…</p>
       </div>
     );
   }
-
-  const elementMap: Record<string, string> = {
-    Aries: 'Fire', Leo: 'Fire', Sagittarius: 'Fire',
-    Taurus: 'Earth', Virgo: 'Earth', Capricorn: 'Earth',
-    Gemini: 'Air', Libra: 'Air', Aquarius: 'Air',
-    Cancer: 'Water', Scorpio: 'Water', Pisces: 'Water',
-  };
 
   // ---------------------------------------------------------------------------
   // Render
@@ -317,7 +319,13 @@ export function Dashboard() {
     <div className="mx-auto max-w-7xl px-6 pb-24 pt-32 lg:px-8">
 
       {/* ---- Header ---- */}
-      <motion.div {...fadeUp(0)} className="mb-10">
+      <motion.div {...fadeUp(0)} className="mb-10 relative">
+        <button
+          onClick={() => router.push('/birth-form')}
+          className="absolute right-0 top-0 inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+        >
+          Start Over
+        </button>
         <p className="mb-2 text-sm uppercase tracking-[0.28em] text-[#D4AF37]">Your Cosmic Blueprint</p>
         <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">
           {birth.name}
@@ -335,7 +343,7 @@ export function Dashboard() {
 
       {/* ---- Stat row ---- */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Sun Sign" value={chart.sunSign} sub={`${elementMap[chart.sunSign] ?? ''} Sign`} color={THEME.signColors[chart.sunSign] ?? THEME.colors.gold} />
+        <StatCard label="Sun Sign" value={chart.sunSign} sub={`${THEME.elementMap[chart.sunSign] ?? ''} Sign`} color={THEME.signColors[chart.sunSign] ?? THEME.colors.gold} />
         <StatCard label="Moon Sign" value={chart.moonSign} sub={`${chart.nakshatra.name} Nakshatra`} color={THEME.signColors[chart.moonSign] ?? THEME.colors.blue} />
         <StatCard label="Ascendant" value={chart.ascendant.sign} sub={`${chart.ascendant.degree.toFixed(1)}° Rising`} color={THEME.colors.gold} />
         <StatCard label="Mahadasha" value={chart.dasha.mahadasha} sub={`${chart.dasha.remainingYears.toFixed(1)} yrs remaining`} color={THEME.colors.green} />

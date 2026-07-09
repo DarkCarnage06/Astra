@@ -26,6 +26,9 @@ interface ReadingRequestBody {
 }
 
 export async function POST(request: NextRequest) {
+  // TODO (Security): Implement IP-based or user-based rate limiting
+  // to prevent abuse and exhaustion of OpenRouter API credits.
+
   let body: ReadingRequestBody;
 
   try {

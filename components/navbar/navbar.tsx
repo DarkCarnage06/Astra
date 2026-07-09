@@ -16,10 +16,20 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Lock body scroll when drawer is open
+  // Lock body scroll and trap focus when drawer is open
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    const mainContent = document.getElementById('main-content');
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden';
+      mainContent?.setAttribute('inert', 'true');
+    } else {
+      document.body.style.overflow = '';
+      mainContent?.removeAttribute('inert');
+    }
+    return () => { 
+      document.body.style.overflow = ''; 
+      mainContent?.removeAttribute('inert');
+    };
   }, [menuOpen]);
 
   // Close drawer on Escape key
@@ -80,6 +90,7 @@ export function Navbar() {
             onClick={() => setMenuOpen((prev) => !prev)}
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
+            aria-controls="mobile-nav-drawer"
             className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition hover:border-white/25 hover:bg-white/10 md:hidden"
           >
             <AnimatePresence mode="wait" initial={false}>
@@ -123,12 +134,17 @@ export function Navbar() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
               onClick={closeMenu}
+              aria-hidden="true"
               className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
             />
 
             {/* Drawer panel */}
             <motion.div
               key="drawer"
+              id="mobile-nav-drawer"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation menu"
               initial={{ x: '100%', opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0 }}

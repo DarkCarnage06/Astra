@@ -11,12 +11,7 @@ import { PROMPT_CONFIG } from '../config/prompts';
 import type { ChartResponse } from '../lib/types/chart';
 import type { BirthDetails } from '../lib/types/chart';
 
-/**
- * The immutable Astra persona — injected into every request as the system message.
- */
-export function getSystemPrompt(): string {
-  return PROMPT_CONFIG.persona;
-}
+// getSystemPrompt removed in favor of direct PROMPT_CONFIG.persona access
 
 /**
  * Build the birth chart context block injected into every reading prompt.

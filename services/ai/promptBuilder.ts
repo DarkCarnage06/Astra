@@ -10,7 +10,8 @@
  * - Returns a ChatMessage[] ready to send to openrouter.ts
  */
 
-import { getSystemPrompt, buildChartContext } from '../../prompts/system';
+import { buildChartContext } from '../../prompts/system';
+import { PROMPT_CONFIG } from '../../config/prompts';
 import { getPersonalityPrompt } from '../../prompts/personality';
 import { getCareerPrompt } from '../../prompts/career';
 import { getRelationshipsPrompt } from '../../prompts/relationships';
@@ -63,7 +64,7 @@ export function buildReadingMessages(
   return [
     {
       role: 'system',
-      content: getSystemPrompt(),
+      content: PROMPT_CONFIG.persona,
     },
     {
       role: 'user',
