@@ -200,7 +200,7 @@ export class OpenRouterClient {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
           'HTTP-Referer': 'https://astra.app',
-          'X-Title': 'ASTRA — Self-Reflection Platform',
+          'X-Title': 'ASTRA - Self-Reflection Platform',
         },
         body: JSON.stringify({
           model: modelId,
