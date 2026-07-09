@@ -31,10 +31,29 @@ export function AskAstraChat() {
   };
 
   useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch('/api/ask');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && data.messages.length > 0) {
+            setMessages(data.messages);
+            setSessionId(data.sessionId);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load chat history:', err);
+      }
+    };
+    fetchHistory();
+  }, []);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages, loading]);
 
   const handleSend = async (textToSend: string) => {
+    console.log('[Frontend] Submit fired. Message:', textToSend);
     if (!textToSend.trim() || loading) return;
 
     setError(null);
@@ -48,11 +67,13 @@ export function AskAstraChat() {
       const chart = loadChartResponse();
 
       if (!birth || !chart) {
+        console.error('[Frontend] Validation failed: Missing birth or chart data.');
         setError('Please generate your birth chart first before chatting with Astra.');
         setLoading(false);
         return;
       }
 
+      console.log('[Frontend] API called: POST /api/ask');
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -66,26 +87,36 @@ export function AskAstraChat() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to get response from Astra.');
+        let errMsg = 'Failed to get response from Astra.';
+        try {
+          const errData = await res.json();
+          if (errData.message) errMsg = errData.message;
+          else if (errData.error) errMsg = errData.error;
+        } catch(e) {}
+        throw new Error(errMsg);
       }
 
       const data = await res.json();
+      console.log('[Frontend] API response received', data);
       if (data.sessionId) {
         setSessionId(data.sessionId);
       }
 
       setMessages((prev) => [...prev, { role: 'assistant', content: data.content }]);
+      console.log('[Frontend] Frontend rendered assistant message');
     } catch (err) {
+      console.error('[Frontend] Fetch failed or error thrown:', err);
       setError(err instanceof Error ? err.message : 'An error occurred.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
     setMessages([]);
     setSessionId(null);
     setError(null);
+    // Let's create a new session next time they send a message
   };
 
   const birth = typeof window !== 'undefined' ? loadBirthDetails() : null;

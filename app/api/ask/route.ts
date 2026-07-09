@@ -10,8 +10,7 @@ import { getOpenRouterClient } from '../../../services/ai/openrouter';
 import { buildChartContext } from '../../../prompts/system';
 import { db } from '../../../lib/db';
 import { MODEL_SETTINGS } from '../../../config/models';
-import fs from 'fs';
-import path from 'path';
+import { PROMPT_TEMPLATES } from './prompts';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,20 +36,48 @@ function classifyIntent(message: string): string {
 }
 
 function getTemplateContent(category: string): string {
-  try {
-    const filePath = path.join(process.cwd(), 'backend', 'prompts', `${category}.md`);
-    if (fs.existsSync(filePath)) {
-      return fs.readFileSync(filePath, 'utf-8');
-    }
-  } catch (err) {
-    console.error(`Failed to read prompt template ${category}:`, err);
+  return PROMPT_TEMPLATES[category as keyof typeof PROMPT_TEMPLATES] || '';
+}
+
+export async function GET(request: NextRequest) {
+  const { userId: clerkId } = await auth();
+  if (!clerkId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  return '';
+  
+  try {
+    const user = await db.user.findUnique({ where: { clerkId } });
+    if (!user) return NextResponse.json({ messages: [], sessionId: null });
+
+    const session = await db.chatSession.findFirst({
+      where: { userId: user.id },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        messages: { orderBy: { createdAt: 'asc' } }
+      }
+    });
+
+    if (!session) {
+      return NextResponse.json({ messages: [], sessionId: null });
+    }
+
+    const messages = session.messages.map(m => ({
+      role: m.role,
+      content: m.content
+    }));
+
+    return NextResponse.json({ messages, sessionId: session.id });
+  } catch (err) {
+    console.error('[Backend] Error fetching history:', err);
+    return NextResponse.json({ error: 'failed_to_load_history' }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
+  console.log('[Backend] /api/ask endpoint entered');
   const { userId: clerkId } = await auth();
   if (!clerkId) {
+    console.error('[Backend] Unauthorized request to /api/ask');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -58,6 +85,7 @@ export async function POST(request: NextRequest) {
   const { message, history = [], birth, chart, sessionId } = body;
 
   if (!message || !birth || !chart) {
+    console.error('[Backend] Validation failed in /api/ask: Missing message, birth, or chart');
     return NextResponse.json({ error: 'invalid_request', message: 'Message, birth details and birth chart are required.' }, { status: 400 });
   }
 
@@ -95,14 +123,16 @@ export async function POST(request: NextRequest) {
           content: message,
         },
       });
+      console.log(`[Backend] User message saved to DB for session ${activeSessionId}`);
     }
   } catch (dbErr) {
-    console.error('Database logging error (user):', dbErr);
+    console.error('[Backend] Database logging error (user message save failed):', dbErr);
   }
 
   // 5. Query OpenRouter
-  if (!process.env.OPENROUTER_API_KEY) {
-    return NextResponse.json({ error: 'service_unavailable', message: 'AI model is not configured.' }, { status: 503 });
+  if (!process.env.OPENROUTER_API_KEY && !process.env.OPENAI_API_KEY) {
+    console.error('[Backend] AI configuration missing. OPENROUTER_API_KEY or OPENAI_API_KEY is required.');
+    return NextResponse.json({ error: 'configuration_error', message: 'AI model is not configured. Missing OPENROUTER_API_KEY or OPENAI_API_KEY.' }, { status: 500 });
   }
 
   const client = getOpenRouterClient();
@@ -116,10 +146,12 @@ export async function POST(request: NextRequest) {
   ];
 
   try {
+    console.log(`[Backend] LLM request sent for category '${category}' with ${apiMessages.length} messages`);
     const response = await client.complete({
       messages: apiMessages,
       maxTokens: MODEL_SETTINGS.maxTokensSummary,
     });
+    console.log('[Backend] LLM response received successfully');
 
     // Clean JSON formatting if it leaked, or extract description
     let cleanText = response.content;
@@ -145,8 +177,9 @@ export async function POST(request: NextRequest) {
             content: cleanText,
           },
         });
+        console.log(`[Backend] Assistant response saved to DB for session ${activeSessionId}`);
       } catch (dbErr) {
-        console.error('Database logging error (assistant):', dbErr);
+        console.error('[Backend] Database logging error (assistant message save failed):', dbErr);
       }
     }
 
@@ -156,6 +189,7 @@ export async function POST(request: NextRequest) {
       category,
     });
   } catch (err) {
+    console.error('[Backend] LLM request failed or other error in /api/ask:', err);
     return NextResponse.json({ error: 'ai_failed', message: String(err) }, { status: 500 });
   }
 }

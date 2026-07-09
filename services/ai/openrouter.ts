@@ -63,11 +63,17 @@ function delay(ms: number): Promise<void> {
 
 export class OpenRouterClient {
   private readonly apiKey: string;
+  private readonly baseUrl: string;
 
   constructor() {
-    this.apiKey = process.env.OPENROUTER_API_KEY ?? '';
-    if (!this.apiKey) {
-      console.warn('[OpenRouter] OPENROUTER_API_KEY is not set. AI readings will use fallback.');
+    if (process.env.OPENROUTER_API_KEY) {
+      this.apiKey = process.env.OPENROUTER_API_KEY;
+      this.baseUrl = OPENROUTER_BASE_URL;
+    } else if (process.env.OPENAI_API_KEY) {
+      this.apiKey = process.env.OPENAI_API_KEY;
+      this.baseUrl = 'https://api.openai.com/v1';
+    } else {
+      throw new Error('AI configuration missing. Provide either OPENROUTER_API_KEY or OPENAI_API_KEY.');
     }
   }
 
@@ -118,7 +124,7 @@ export class OpenRouterClient {
     );
 
     try {
-      const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: this._headers(),
         body: JSON.stringify({
@@ -174,7 +180,7 @@ export class OpenRouterClient {
     );
 
     try {
-      const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: this._headers(),
         body: JSON.stringify({
