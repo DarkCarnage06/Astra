@@ -125,7 +125,6 @@ export function BirthForm() {
   // ---------------------------------------------------------------------------
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    console.log('BirthForm: handleSubmit entered');
     setGlobalError(null);
     setFieldErrors({});
 
@@ -139,7 +138,6 @@ export function BirthForm() {
     };
 
     const validation = validateBirthDetails(birthDraft);
-    console.log('BirthForm: Validation results:', validation);
     if (!validation.valid) {
       const errs: Record<string, string> = {};
       validation.errors.forEach((e) => { errs[e.field] = e.message; });
@@ -160,16 +158,13 @@ export function BirthForm() {
       let timezone: string;
       let displayPlace: string;
 
-      console.log('BirthForm: Geocode started for place:', form.place);
       try {
         const geo = await geocodePlace(sanitizeString(form.place));
         latitude = geo.latitude;
         longitude = geo.longitude;
         timezone = geo.timezone;
         displayPlace = geo.displayName;
-        console.log('BirthForm: Geocode succeeded:', { latitude, longitude, timezone, displayPlace });
       } catch (err) {
-        console.error('BirthForm: Geocode failed:', err);
         if (err instanceof GeocodeError) {
           setGlobalError(err.message);
         } else {
@@ -196,14 +191,6 @@ export function BirthForm() {
       advanceStep();
       track(ANALYTICS_EVENTS.CHART_REQUESTED);
 
-      console.log('BirthForm: generateChart starting fetch with payload:', {
-        date: birthDetails.date,
-        time: birthDetails.time,
-        latitude,
-        longitude,
-        timezone,
-      });
-
       const chart = await generateChart({
         date: birthDetails.date,
         time: birthDetails.time,
@@ -212,21 +199,17 @@ export function BirthForm() {
         timezone,
       });
 
-      console.log('BirthForm: generateChart fetch finished successfully. Chart:', chart);
       advanceStep();
 
       // 5. Persist both to localStorage for the dashboard
-      console.log('BirthForm: Saving details to localStorage');
       saveBirthDetails(birthDetails);
       saveChartResponse(chart);
 
       advanceStep();
 
       // 6. Navigate to dashboard
-      console.log('BirthForm: Redirecting to /dashboard');
       router.push('/dashboard');
     } catch (err) {
-      console.error('BirthForm: Catch error:', err);
       if (err instanceof ChartApiError) {
         if (err.statusCode === 0) {
           setGlobalError('Cannot reach the ASTRA server. Is the backend running?');
