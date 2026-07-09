@@ -1,0 +1,187 @@
+// prisma/schema.prisma
+// ASTRA — Production Database Schema
+// Neon PostgreSQL via @prisma/client
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ---------------------------------------------------------------------------
+// User — synced from Clerk on first sign-in
+// ---------------------------------------------------------------------------
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  plan      Plan     @default(FREE)
+  timezone  String   @default("UTC")
+  language  String   @default("en")
+  theme     String   @default("dark")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  birthDetail  BirthDetail?
+  birthChart   BirthChart?
+  chatSessions ChatSession[]
+  subscription Subscription?
+  feedback     Feedback[]
+
+  @@index([clerkId])
+}
+
+// ---------------------------------------------------------------------------
+// BirthDetail — raw user-entered birth info
+// ---------------------------------------------------------------------------
+model BirthDetail {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  name         String
+  date         String   // YYYY-MM-DD
+  time         String?  // HH:mm
+  knownTime    Boolean  @default(false)
+  place        String
+  displayPlace String?
+  latitude     Float?
+  longitude    Float?
+  timezone     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// BirthChart — computed chart (JSON blob from FastAPI)
+// ---------------------------------------------------------------------------
+model BirthChart {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  chartJson      Json     // Full ChartResponse from FastAPI
+  ayanamsa       String
+  sunSign        String
+  moonSign       String
+  ascendantSign  String
+  mahadasha      String
+  antardasha     String
+  generatedAt    DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planets PlanetPosition[]
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// PlanetPosition — denormalized for fast querying
+// ---------------------------------------------------------------------------
+model PlanetPosition {
+  id         String @id @default(cuid())
+  chartId    String
+  name       String
+  sign       String
+  degree     Float
+  longitude  Float
+  house      Int
+  retrograde Boolean
+  speed      Float
+
+  chart BirthChart @relation(fields: [chartId], references: [id], onDelete: Cascade)
+
+  @@index([chartId])
+}
+
+// ---------------------------------------------------------------------------
+// ChatSession — groups chat messages together
+// ---------------------------------------------------------------------------
+model ChatSession {
+  id        String      @id @default(cuid())
+  userId    String
+  title     String      @default("New Session")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// ChatMessage — individual turns in a conversation
+// ---------------------------------------------------------------------------
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+  tokens    Int?
+  createdAt DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+// ---------------------------------------------------------------------------
+// Subscription — Razorpay integration
+// ---------------------------------------------------------------------------
+model Subscription {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpaySignature String?
+  plan              Plan
+  status            SubStatus @default(ACTIVE)
+  amount            Int       // in paise (INR)
+  currency          String    @default("INR")
+  startDate         DateTime  @default(now())
+  endDate           DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Feedback — user feedback submissions
+// ---------------------------------------------------------------------------
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "bug" | "feature" | "general"
+  message   String   @db.Text
+  rating    Int?     // 1–5
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+enum Plan {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum SubStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PENDING
+}

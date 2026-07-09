@@ -44,7 +44,7 @@ class EphemerisEngine:
 
     def get_ayanamsa(self, julian_day: float) -> float:
         swe = _get_swe()
-        return round(swe.get_ayanamsa(jd=julian_day), 6)
+        return round(swe.get_ayanamsa(julian_day), 6)
 
     def get_ascendant_longitude(self, julian_day: float, latitude: float, longitude: float) -> float:
         swe = _get_swe()

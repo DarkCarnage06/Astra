@@ -17,3 +17,12 @@ def health_check() -> dict[str, str | bool]:
         "ephemerisReady": is_swisseph_available(),
         "flatlibReady": is_flatlib_available(),
     }
+
+
+@router.get(
+    "/health",
+    summary="Simple service health check",
+    description="Returns a simple JSON indicating that the application is healthy.",
+)
+def health_check_alt() -> dict[str, str]:
+    return {"status": "healthy"}
