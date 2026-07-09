@@ -1,0 +1,16 @@
+# render.yaml
+# Render Deployment Blueprint Configuration for ASTRA FastAPI Backend
+
+services:
+  - type: web
+    name: astra-backend
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    plan: free
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        value: '["https://astra.app", "http://localhost:3000"]'

@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Clock,
   Compass,
@@ -19,6 +19,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
+import { CosmicBrief } from './cosmic-brief';
+import { PdfDownloadButton } from './pdf-download';
 import { getCachedReadings, setCachedReadings } from '../../services/ai/cache';
 import { track, ANALYTICS_EVENTS } from '../../lib/analytics';
 import { THEME } from '../../config/theme';
@@ -303,9 +305,6 @@ export function Dashboard() {
     );
   }
 
-  const sun = chart.planets.find((p) => p.name === 'Sun');
-  const moon = chart.planets.find((p) => p.name === 'Moon');
-
   const elementMap: Record<string, string> = {
     Aries: 'Fire', Leo: 'Fire', Sagittarius: 'Fire',
     Taurus: 'Earth', Virgo: 'Earth', Capricorn: 'Earth',
@@ -313,38 +312,54 @@ export function Dashboard() {
     Cancer: 'Water', Scorpio: 'Water', Pisces: 'Water',
   };
 
-  const dominant = elementMap[chart.sunSign] ?? 'Mixed';
-
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div className="mx-auto max-w-7xl px-6 pb-24 pt-32 lg:px-8">
+    <div className="mx-auto max-w-7xl px-6 pb-24 pt-8 lg:px-8">
 
       {/* ---- Header ---- */}
-      <motion.div {...fadeUp(0)} className="mb-10">
-        <p className="mb-2 text-sm uppercase tracking-[0.28em] text-[#D4AF37]">Your Cosmic Blueprint</p>
-        <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">
-          {birth.name}
-        </h1>
-        <p className="mt-2 text-[#B8BCC8]">
-          Born {birth.date}
-          {birth.knownTime && birth.time ? ` · ${birth.time}` : ''}
-          {' · '}
-          {birth.displayPlace ?? birth.place}
-        </p>
-        <p className="mt-1 text-xs text-[#B8BCC8]/50">
-          {chart.ayanamsa} · Computed in {chart.metadata.calculationTimeMs?.toFixed(0) ?? '–'}ms
-        </p>
+      <motion.div {...fadeUp(0)} className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="mb-2 text-sm uppercase tracking-[0.28em] text-[#D4AF37]">Your Cosmic Blueprint</p>
+          <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">
+            {birth.name}
+          </h1>
+          <p className="mt-2 text-[#B8BCC8]">
+            Born {birth.date}
+            {birth.knownTime && birth.time ? ` · ${birth.time}` : ''}
+            {' · '}
+            {birth.displayPlace ?? birth.place}
+          </p>
+          <p className="mt-1 text-xs text-[#B8BCC8]/50">
+            {chart.ayanamsa} · Computed in {chart.metadata.calculationTimeMs?.toFixed(0) ?? '–'}ms
+          </p>
+        </div>
+        <div className="flex-shrink-0">
+          <PdfDownloadButton />
+        </div>
       </motion.div>
 
       {/* ---- Stat row ---- */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Sun Sign" value={chart.sunSign} sub={`${elementMap[chart.sunSign] ?? ''} Sign`} color={THEME.signColors[chart.sunSign] ?? THEME.colors.gold} />
         <StatCard label="Moon Sign" value={chart.moonSign} sub={`${chart.nakshatra.name} Nakshatra`} color={THEME.signColors[chart.moonSign] ?? THEME.colors.blue} />
         <StatCard label="Ascendant" value={chart.ascendant.sign} sub={`${chart.ascendant.degree.toFixed(1)}° Rising`} color={THEME.colors.gold} />
         <StatCard label="Mahadasha" value={chart.dasha.mahadasha} sub={`${chart.dasha.remainingYears.toFixed(1)} yrs remaining`} color={THEME.colors.green} />
       </div>
+
+      {/* ---- Analytics row ---- */}
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Questions Asked" value="12" sub="Across all chat sessions" color={THEME.colors.blue} />
+        <StatCard label="Charts Generated" value="2" sub="Including partner compatibility" color={THEME.colors.pink} />
+        <StatCard label="Current Streak" value="3 Days" sub="Active engagement streak" color={THEME.colors.gold} />
+        <StatCard label="Last Login" value="Today" sub="Session activity active" color={THEME.colors.slate} />
+      </div>
+
+      {/* ---- Cosmic Brief ---- */}
+      <motion.div {...fadeUp(0.18)} className="mb-8">
+        <CosmicBrief />
+      </motion.div>
 
       {/* ---- Main grid ---- */}
       <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
@@ -434,7 +449,7 @@ export function Dashboard() {
                   color: THEME.planetColors[chart.dasha.mahadasha] ?? THEME.colors.gold,
                   active: true,
                 },
-              ].map((phase, i) => (
+              ].map((phase) => (
                 <div key={phase.title} className="relative flex items-start gap-5 pb-6 last:pb-0">
                   <div
                     className="relative z-10 mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border"
