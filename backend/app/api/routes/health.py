@@ -21,8 +21,8 @@ def health_check() -> dict[str, str | bool]:
 
 @router.get(
     "/health",
-    summary="Service health check",
-    description="Returns API status and ephemeris dependency availability.",
+    summary="Simple service health check",
+    description="Returns a simple JSON indicating that the application is healthy.",
 )
-def health_check_alt() -> dict[str, str | bool]:
-    return health_check()
+def health_check_alt() -> dict[str, str]:
+    return {"status": "healthy"}
