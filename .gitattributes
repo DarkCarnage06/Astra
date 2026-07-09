@@ -1,0 +1,16 @@
+# ASTRA — Git Attributes
+# Normalize line endings to LF on commit across all platforms.
+
+* text=auto eol=lf
+
+# Force binary treatment for assets
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary

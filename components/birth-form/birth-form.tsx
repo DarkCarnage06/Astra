@@ -170,7 +170,8 @@ export function BirthForm() {
         } else {
           setGlobalError('Could not locate your birthplace. Please try a more specific name.');
         }
-        return;
+        // Do NOT return here — fall through to finally so loading is cleared
+        throw err;
       }
 
       // 3. Build complete birth details object
@@ -210,7 +211,10 @@ export function BirthForm() {
       // 6. Navigate to dashboard
       router.push('/dashboard');
     } catch (err) {
-      if (err instanceof ChartApiError) {
+      // GeocodeError is already handled above — only set a message if one isn't set
+      if (err instanceof GeocodeError) {
+        // globalError already set in inner catch; do nothing
+      } else if (err instanceof ChartApiError) {
         if (err.statusCode === 0) {
           setGlobalError('Cannot reach the ASTRA server. Is the backend running?');
         } else {

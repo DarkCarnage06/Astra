@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Clock,
   Compass,
@@ -303,17 +303,12 @@ export function Dashboard() {
     );
   }
 
-  const sun = chart.planets.find((p) => p.name === 'Sun');
-  const moon = chart.planets.find((p) => p.name === 'Moon');
-
   const elementMap: Record<string, string> = {
     Aries: 'Fire', Leo: 'Fire', Sagittarius: 'Fire',
     Taurus: 'Earth', Virgo: 'Earth', Capricorn: 'Earth',
     Gemini: 'Air', Libra: 'Air', Aquarius: 'Air',
     Cancer: 'Water', Scorpio: 'Water', Pisces: 'Water',
   };
-
-  const dominant = elementMap[chart.sunSign] ?? 'Mixed';
 
   // ---------------------------------------------------------------------------
   // Render
@@ -434,7 +429,7 @@ export function Dashboard() {
                   color: THEME.planetColors[chart.dasha.mahadasha] ?? THEME.colors.gold,
                   active: true,
                 },
-              ].map((phase, i) => (
+              ].map((phase) => (
                 <div key={phase.title} className="relative flex items-start gap-5 pb-6 last:pb-0">
                   <div
                     className="relative z-10 mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border"

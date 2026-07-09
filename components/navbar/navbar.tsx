@@ -50,11 +50,11 @@ export function Navbar() {
           <nav className="hidden items-center gap-8 text-sm text-[#B8BCC8] md:flex">
             {navItems.map((item) => (
               <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
+                key={item.label}
+                href={item.href}
                 className="transition hover:text-white"
               >
-                {item}
+                {item.label}
               </a>
             ))}
           </nav>
@@ -158,8 +158,8 @@ export function Navbar() {
               <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-6">
                 {navItems.map((item, index) => (
                   <motion.a
-                    key={item}
-                    href={`#${item.toLowerCase()}`}
+                    key={item.label}
+                    href={item.href}
                     onClick={closeMenu}
                     initial={{ opacity: 0, x: 24 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -167,7 +167,7 @@ export function Navbar() {
                     className="group flex items-center gap-3 rounded-2xl px-4 py-3.5 text-[0.95rem] font-medium text-[#B8BCC8] transition hover:bg-white/5 hover:text-white"
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]/40 transition group-hover:bg-[#D4AF37]" />
-                    {item}
+                    {item.label}
                   </motion.a>
                 ))}
               </nav>

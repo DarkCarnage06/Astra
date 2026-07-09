@@ -135,8 +135,6 @@ export type ReadingTheme =
   | 'personality'
   | 'career'
   | 'relationships'
-  | 'money'
-  | 'health'
   | 'reflection'
   | 'daily'
   | 'hidden-strength'

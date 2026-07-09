@@ -33,17 +33,14 @@ import type { ReadingTheme } from '../../lib/types/chart';
 type PromptFn = (name: string) => string;
 
 const READING_PROMPTS: Record<ReadingTheme, PromptFn> = {
-  personality:      getPersonalityPrompt,
-  career:           getCareerPrompt,
-  relationships:    getRelationshipsPrompt,
-  reflection:       getReflectionPrompt,
-  daily:            getDailyPrompt,
+  personality:       getPersonalityPrompt,
+  career:            getCareerPrompt,
+  relationships:     getRelationshipsPrompt,
+  reflection:        getReflectionPrompt,
+  daily:             getDailyPrompt,
   'hidden-strength': getHiddenStrengthPrompt,
-  'blind-spot':     getBlindSpotPrompt,
-  growth:           getGrowthPrompt,
-  // Structural aliases (maps to same prompts)
-  money:            getCareerPrompt,
-  health:           getReflectionPrompt,
+  'blind-spot':      getBlindSpotPrompt,
+  growth:            getGrowthPrompt,
 };
 
 // ---------------------------------------------------------------------------

@@ -19,8 +19,8 @@ export default {
         goldGlow: '0 0 80px rgba(212,175,55,0.2)',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        display: ['Space Grotesk', 'sans-serif'],
+        sans:    ['var(--font-inter)', 'Inter', 'sans-serif'],
+        display: ['var(--font-space-grotesk)', 'Space Grotesk', 'sans-serif'],
       },
       backgroundImage: {
         noise: 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)',
