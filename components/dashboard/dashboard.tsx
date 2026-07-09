@@ -211,15 +211,19 @@ export function Dashboard() {
   // Load birth + chart from localStorage on mount
   // ---------------------------------------------------------------------------
   useEffect(() => {
+    console.log('Dashboard: useEffect on mount triggered');
     const storedBirth = loadBirthDetails();
     const storedChart = loadChartResponse();
+    console.log('Dashboard: Stored birth details loaded:', storedBirth);
+    console.log('Dashboard: Stored chart response loaded:', storedChart);
 
     if (!storedBirth || !storedChart) {
-      // No data — send back to form
+      console.warn('Dashboard: Stored data missing! Redirecting to /birth-form');
       router.replace('/birth-form');
       return;
     }
 
+    console.log('Dashboard: Setting state for birth and chart');
     setBirth(storedBirth);
     setChart(storedChart);
     track(ANALYTICS_EVENTS.DASHBOARD_VIEWED);
@@ -296,6 +300,7 @@ export function Dashboard() {
   // Loading state (before localStorage hydration)
   // ---------------------------------------------------------------------------
   if (!birth || !chart) {
+    console.log('Dashboard: RENDER: birth or chart is null, rendering loading spinner');
     return (
       <div className="flex min-h-screen items-center justify-center">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
