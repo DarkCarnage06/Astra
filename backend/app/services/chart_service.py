@@ -26,10 +26,8 @@ class ChartService:
             log_calculation_time(timer.elapsed_ms)
             chart.metadata.calculationTimeMs = round(timer.elapsed_ms, 2)
             return chart
+        except ChartCalculationError:
+            raise
         except Exception as exc:
-            import traceback
-            tb = traceback.format_exc()
             log_error("Unexpected chart calculation failure", exc)
-            raise ChartCalculationError(
-                f"Chart calculation failed: {str(exc)} | Traceback: {tb}"
-            ) from exc
+            raise ChartCalculationError("Chart calculation failed due to an ephemeris error.") from exc
