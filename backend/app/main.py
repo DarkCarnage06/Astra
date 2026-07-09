@@ -1,7 +1,11 @@
+import json
+import os
+import re
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from loguru import logger
 
 from app.api.router import api_router
 from app.core.config import settings
@@ -15,6 +19,30 @@ from app.core.exceptions import (
 from app.core.logging import log_error
 from app.models.chart import ErrorResponse
 
+# Dynamic CORS origins configuration
+cors_origins_raw = os.getenv("CORS_ORIGINS", "")
+allowed_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "https://astra.app"]
+
+if cors_origins_raw:
+    try:
+        parsed = json.loads(cors_origins_raw)
+        if isinstance(parsed, list):
+            allowed_origins.extend(parsed)
+    except Exception:
+        allowed_origins.extend([o.strip() for o in cors_origins_raw.split(",") if o.strip()])
+
+# Build regex pattern supporting localhost, 127.0.0.1, Vercel subdomains (*.vercel.app), and defined origins
+regex_patterns = [
+    r"https?://localhost:3000",
+    r"https?://127.0.0.1:3000",
+    r"https://.*\.vercel\.app",
+]
+for origin in allowed_origins:
+    escaped = re.escape(origin).replace(r"\*", r".*")
+    regex_patterns.append(f"^{escaped}$")
+
+cors_origin_regex = "^(" + "|".join(regex_patterns) + ")$"
+
 app = FastAPI(
     title=settings.app_name,
     version="0.2.0",
@@ -25,9 +53,20 @@ app = FastAPI(
     ),
 )
 
+# 1. Log incoming origin header
+@app.middleware("http")
+async def log_origin_middleware(request: Request, call_next):
+    origin = request.headers.get("origin")
+    if origin:
+        logger.info(f"Incoming request from Origin: {origin}")
+    response = await call_next(request)
+    return response
+
+# 2. Add CORSMiddleware with credentials, methods, headers, and dynamic regex support
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=allowed_origins,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

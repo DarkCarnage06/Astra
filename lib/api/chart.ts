@@ -9,12 +9,7 @@
 import { trackApiLatency, trackChartGenerated } from '../analytics';
 import type { ChartRequest, ChartResponse, ApiErrorResponse } from '../types/chart';
 
-// ---------------------------------------------------------------------------
-// API base URL — configured via environment variable
-// ---------------------------------------------------------------------------
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+import { apiUrl } from '../api';
 
 // ---------------------------------------------------------------------------
 // Error class
@@ -48,12 +43,13 @@ export class ChartApiError extends Error {
 export async function generateChart(request: ChartRequest): Promise<ChartResponse> {
   const startTime = Date.now();
   const endpoint = '/api/chart';
+  const url = apiUrl(endpoint);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -67,20 +63,28 @@ export async function generateChart(request: ChartRequest): Promise<ChartRespons
     trackApiLatency(endpoint, latencyMs);
 
     if (!response.ok) {
+      const rawText = await response.text();
       let errorBody: ApiErrorResponse;
       try {
-        errorBody = await response.json();
+        errorBody = JSON.parse(rawText);
       } catch {
         errorBody = {
           error: 'unknown_error',
           message: `API returned ${response.status} ${response.statusText}`,
+          detail: rawText,
         };
       }
+      console.error('[ASTRA Backend Error]', {
+        status: response.status,
+        statusText: response.statusText,
+        body: rawText,
+        errorBody,
+      });
       throw new ChartApiError(
         response.status,
         errorBody.error,
         errorBody.message,
-        errorBody.detail,
+        errorBody.detail || rawText,
       );
     }
 
@@ -88,16 +92,19 @@ export async function generateChart(request: ChartRequest): Promise<ChartRespons
     trackChartGenerated(chart.metadata.calculationTimeMs);
     return chart;
   } catch (err) {
+    console.error('[ASTRA Network/API Exception]', err);
     if (err instanceof ChartApiError) throw err;
 
     if (err instanceof Error && err.name === 'AbortError') {
       throw new ChartApiError(408, 'timeout', 'Chart generation timed out. Please try again.');
     }
 
+    const message = err instanceof Error ? err.message : String(err);
     throw new ChartApiError(
       0,
       'network_error',
-      'Unable to reach the ASTRA server. Please check your connection.',
+      `Unable to reach the ASTRA server. Detail: ${message}`,
+      err instanceof Error ? err.stack : undefined,
     );
   } finally {
     clearTimeout(timeoutId);
@@ -110,7 +117,7 @@ export async function generateChart(request: ChartRequest): Promise<ChartRespons
 
 export async function pingBackend(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE_URL}/health`, {
+    const response = await fetch(apiUrl('/health'), {
       method: 'GET',
       signal: AbortSignal.timeout(5_000),
     });

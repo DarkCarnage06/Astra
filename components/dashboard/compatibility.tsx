@@ -21,6 +21,7 @@ import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
 import { THEME } from '../../config/theme';
 import type { ChartResponse, GeocodeResponse } from '../../lib/types/chart';
 import type { AiReading } from '../../lib/types/chart';
+import { apiUrl } from '../../lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -327,7 +328,6 @@ export function CompatibilityTool() {
   const [narrativeLoading, setNarrativeLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000') + '/api/chart';
 
   // Load user chart on mount
   useEffect(() => {
@@ -389,7 +389,7 @@ export function CompatibilityTool() {
 
     // Step 2: Fetch partner chart from FastAPI
     try {
-      const chartRes = await fetch(apiUrl, {
+      const chartRes = await fetch(apiUrl('/api/chart'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
