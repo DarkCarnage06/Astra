@@ -65,10 +65,10 @@ function FormField({ label, icon, children, index, error }: FieldProps) {
 // Input style helper
 // ---------------------------------------------------------------------------
 const inputClass =
-  'w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white placeholder-white/25 outline-none backdrop-blur-xl transition-all duration-200 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#D4AF37]/30 hover:border-white/20 text-sm';
+  'w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white placeholder-white/50 outline-none backdrop-blur-xl transition-all duration-200 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#D4AF37]/30 hover:border-white/20 text-sm';
 
 const inputErrorClass =
-  'w-full rounded-2xl border border-red-400/40 bg-white/5 px-5 py-4 text-white placeholder-white/25 outline-none backdrop-blur-xl transition-all duration-200 focus:border-red-400/60 focus:ring-1 focus:ring-red-400/30 text-sm';
+  'w-full rounded-2xl border border-red-400/40 bg-white/5 px-5 py-4 text-white placeholder-white/50 outline-none backdrop-blur-xl transition-all duration-200 focus:border-red-400/60 focus:ring-1 focus:ring-red-400/30 text-sm';
 
 // ---------------------------------------------------------------------------
 // Loading step labels
@@ -170,7 +170,8 @@ export function BirthForm() {
         } else {
           setGlobalError('Could not locate your birthplace. Please try a more specific name.');
         }
-        return;
+        // Do NOT return here — fall through to finally so loading is cleared
+        throw err;
       }
 
       // 3. Build complete birth details object
@@ -210,7 +211,10 @@ export function BirthForm() {
       // 6. Navigate to dashboard
       router.push('/dashboard');
     } catch (err) {
-      if (err instanceof ChartApiError) {
+      // GeocodeError is already handled above — only set a message if one isn't set
+      if (err instanceof GeocodeError) {
+        // globalError already set in inner catch; do nothing
+      } else if (err instanceof ChartApiError) {
         if (err.statusCode === 0) {
           setGlobalError('Cannot reach the ASTRA server. Is the backend running?');
         } else {

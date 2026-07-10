@@ -45,7 +45,7 @@ cors_origin_regex = "^(" + "|".join(regex_patterns) + ")$"
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.2.0",
+    version="1.0.0",
     description=(
         "ASTRA astrology calculation engine. Computes sidereal birth charts locally using "
         "Swiss Ephemeris and exposes structured JSON for the Next.js frontend and future AI "

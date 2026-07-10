@@ -63,17 +63,11 @@ function delay(ms: number): Promise<void> {
 
 export class OpenRouterClient {
   private readonly apiKey: string;
-  private readonly baseUrl: string;
 
   constructor() {
-    if (process.env.OPENROUTER_API_KEY) {
-      this.apiKey = process.env.OPENROUTER_API_KEY;
-      this.baseUrl = OPENROUTER_BASE_URL;
-    } else if (process.env.OPENAI_API_KEY) {
-      this.apiKey = process.env.OPENAI_API_KEY;
-      this.baseUrl = 'https://api.openai.com/v1';
-    } else {
-      throw new Error('AI configuration missing. Provide either OPENROUTER_API_KEY or OPENAI_API_KEY.');
+    this.apiKey = process.env.OPENROUTER_API_KEY ?? '';
+    if (!this.apiKey) {
+      console.warn('[OpenRouter] OPENROUTER_API_KEY is not set. AI readings will use fallback.');
     }
   }
 
@@ -93,23 +87,11 @@ export class OpenRouterClient {
       }
 
       try {
-        const result = await this._sendRequest(request, modelId, this.baseUrl, this.apiKey);
+        const result = await this._sendRequest(request, modelId);
         return result;
       } catch (err) {
         if (err instanceof AiClientError) {
           lastError = err;
-          // If OpenRouter fails and we have OpenAI key, try OpenAI immediately!
-          if (this.baseUrl === OPENROUTER_BASE_URL && process.env.OPENAI_API_KEY) {
-             console.warn('[OpenRouter] Provider failed, testing OpenAI compatibility...');
-             try {
-                // OpenAI models are different. Map primary to gpt-4o-mini
-                const openAiModel = 'gpt-4o-mini';
-                const openAiResult = await this._sendRequest(request, openAiModel, 'https://api.openai.com/v1', process.env.OPENAI_API_KEY);
-                return openAiResult;
-             } catch (openAiErr) {
-                console.error('[OpenRouter] OpenAI fallback also failed:', openAiErr);
-             }
-          }
           if (!err.retryable) throw err; // Don't retry auth errors, invalid requests
           if (attempt === MODEL_SETTINGS.maxRetries) throw err;
         } else {
@@ -136,7 +118,7 @@ export class OpenRouterClient {
     );
 
     try {
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
         method: 'POST',
         headers: this._headers(),
         body: JSON.stringify({
@@ -184,8 +166,6 @@ export class OpenRouterClient {
   private async _sendRequest(
     request: CompletionRequest,
     modelId: string,
-    baseUrl: string,
-    apiKey: string,
   ): Promise<CompletionResponse> {
     const controller = new AbortController();
     const timeoutId = setTimeout(
@@ -194,14 +174,9 @@ export class OpenRouterClient {
     );
 
     try {
-      const response = await fetch(`${baseUrl}/chat/completions`, {
+      const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://astra.app',
-          'X-Title': 'ASTRA - Self-Reflection Platform',
-        },
+        headers: this._headers(),
         body: JSON.stringify({
           model: modelId,
           messages: request.messages,
@@ -230,9 +205,7 @@ export class OpenRouterClient {
       if (err instanceof Error && err.name === 'AbortError') {
         throw new AiClientError(408, 'Request timed out', true);
       }
-      const realError = err instanceof Error ? err.message : String(err);
-      console.error('[OpenRouter] Network error:', err);
-      throw new AiClientError(0, `Network error: ${realError}`, true);
+      throw new AiClientError(0, 'Network error', true);
     } finally {
       clearTimeout(timeoutId);
     }
@@ -243,7 +216,7 @@ export class OpenRouterClient {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${this.apiKey}`,
       'HTTP-Referer': 'https://astra.app',
-      'X-Title': 'ASTRA - Self-Reflection Platform',
+      'X-Title': 'ASTRA — Self-Reflection Platform',
     };
   }
 }

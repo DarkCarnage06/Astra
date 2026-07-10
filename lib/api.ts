@@ -6,7 +6,7 @@
  */
 
 if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_API_URL) {
-  throw new Error('BUILD_ERROR: NEXT_PUBLIC_API_URL environment variable is missing during production build!');
+  console.warn('BUILD_WARNING: NEXT_PUBLIC_API_URL environment variable is missing. API calls may fail.');
 }
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');

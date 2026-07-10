@@ -19,16 +19,14 @@ import type { AiReading, ReadingTheme } from '../../lib/types/chart';
 // ---------------------------------------------------------------------------
 
 const THEME_PRIORITY: Record<ReadingTheme, number> = {
-  personality:      1,
+  personality:       1,
   'hidden-strength': 2,
-  career:           3,
-  relationships:    4,
-  'blind-spot':     5,
-  growth:           6,
-  reflection:       7,
-  daily:            8,
-  money:            4,
-  health:           7,
+  career:            3,
+  relationships:     4,
+  'blind-spot':      5,
+  growth:            6,
+  reflection:        7,
+  daily:             8,
 };
 
 // ---------------------------------------------------------------------------
@@ -75,8 +73,6 @@ function getFallbackContent(theme: ReadingTheme, name: string): { title: string;
     growth:            { title: 'Your Growth Direction', description: 'Your chart points toward embracing the unfamiliar as your primary area of expansion.' },
     reflection:        { title: 'A Question for You', description: 'Where in your life are you holding back what is most authentic about you?' },
     daily:             { title: "Today's Energy", description: 'Your current planetary period supports focused effort and careful attention to what matters most.' },
-    money:             { title: 'Your Relationship with Resources', description: 'Your chart suggests that abundance flows most freely when aligned with your values.' },
-    health:            { title: 'Your Wellbeing Pattern', description: 'Your chart calls for a balance between action and genuine rest.' },
   };
   return fallbacks[theme] ?? { title: 'Insight', description: 'Your chart holds a unique story.' };
 }

@@ -10,7 +10,8 @@
  * - Returns a ChatMessage[] ready to send to openrouter.ts
  */
 
-import { getSystemPrompt, buildChartContext } from '../../prompts/system';
+import { buildChartContext } from '../../prompts/system';
+import { PROMPT_CONFIG } from '../../config/prompts';
 import { getPersonalityPrompt } from '../../prompts/personality';
 import { getCareerPrompt } from '../../prompts/career';
 import { getRelationshipsPrompt } from '../../prompts/relationships';
@@ -33,17 +34,14 @@ import type { ReadingTheme } from '../../lib/types/chart';
 type PromptFn = (name: string) => string;
 
 const READING_PROMPTS: Record<ReadingTheme, PromptFn> = {
-  personality:      getPersonalityPrompt,
-  career:           getCareerPrompt,
-  relationships:    getRelationshipsPrompt,
-  reflection:       getReflectionPrompt,
-  daily:            getDailyPrompt,
+  personality:       getPersonalityPrompt,
+  career:            getCareerPrompt,
+  relationships:     getRelationshipsPrompt,
+  reflection:        getReflectionPrompt,
+  daily:             getDailyPrompt,
   'hidden-strength': getHiddenStrengthPrompt,
-  'blind-spot':     getBlindSpotPrompt,
-  growth:           getGrowthPrompt,
-  // Structural aliases (maps to same prompts)
-  money:            getCareerPrompt,
-  health:           getReflectionPrompt,
+  'blind-spot':      getBlindSpotPrompt,
+  growth:            getGrowthPrompt,
 };
 
 // ---------------------------------------------------------------------------
@@ -66,7 +64,7 @@ export function buildReadingMessages(
   return [
     {
       role: 'system',
-      content: getSystemPrompt(),
+      content: PROMPT_CONFIG.persona,
     },
     {
       role: 'user',

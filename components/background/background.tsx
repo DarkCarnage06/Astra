@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -14,6 +14,7 @@ interface Star {
   phase: number;    // twinkle phase offset (0–2π)
   speed: number;    // twinkle speed multiplier
   opacity: number;  // base opacity
+  tintSeed: number; // precomputed color tint bucket (0–6)
 }
 
 const STAR_COUNT = 220;
@@ -39,6 +40,7 @@ function generateStars(): Star[] {
       phase: (i * 2.399) % (Math.PI * 2),
       speed: 0.4 + ((i * 7919) % 100) / 100 * 0.8,
       opacity: 0.35 + ((i * 6271) % 100) / 100 * 0.55,
+      tintSeed: i % 7,  // precomputed — avoids indexOf() in draw loop
     });
   }
   return stars;
@@ -66,12 +68,29 @@ function StarfieldCanvas({ mouseX, mouseY }: { mouseX: number; mouseY: number })
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
     resize();
     window.addEventListener('resize', resize);
+
+    // When reduced motion is preferred, draw stars once (static, no twinkle/parallax)
+    if (prefersReducedMotion) {
+      const { width, height } = canvas;
+      for (const star of STARS) {
+        ctx.beginPath();
+        ctx.arc(star.x * width, star.y * height, star.radius, 0, Math.PI * 2);
+        let color = '255,255,255';
+        if (star.layer === 3 && star.tintSeed === 0) color = '56,189,248';
+        if (star.layer === 3 && star.tintSeed === 1) color = '212,175,55';
+        ctx.fillStyle = `rgba(${color},${star.opacity.toFixed(3)})`;
+        ctx.fill();
+      }
+      return () => window.removeEventListener('resize', resize);
+    }
 
     const draw = (timestamp: number) => {
       if (!startRef.current) startRef.current = timestamp;
@@ -98,11 +117,10 @@ function StarfieldCanvas({ mouseX, mouseY }: { mouseX: number; mouseY: number })
         ctx.beginPath();
         ctx.arc(sx, sy, star.radius, 0, Math.PI * 2);
 
-        // Occasional blue or gold tint on brighter stars
+        // Occasional blue or gold tint on brighter stars (tintSeed precomputed at generation)
         let color = '255,255,255';
-        const tintSeed = STARS.indexOf(star) % 7;
-        if (star.layer === 3 && tintSeed === 0) color = '56,189,248';     // blue
-        if (star.layer === 3 && tintSeed === 1) color = '212,175,55';      // gold
+        if (star.layer === 3 && star.tintSeed === 0) color = '56,189,248';  // blue
+        if (star.layer === 3 && star.tintSeed === 1) color = '212,175,55';  // gold
 
         ctx.fillStyle = `rgba(${color},${alpha.toFixed(3)})`;
         ctx.fill();
@@ -135,6 +153,7 @@ function StarfieldCanvas({ mouseX, mouseY }: { mouseX: number; mouseY: number })
       ref={canvasRef}
       className="absolute inset-0 h-full w-full"
       style={{ opacity: 0.9 }}
+      aria-hidden="true"
     />
   );
 }
@@ -142,9 +161,10 @@ function StarfieldCanvas({ mouseX, mouseY }: { mouseX: number; mouseY: number })
 // ---------------------------------------------------------------------------
 // Main Background component
 // ---------------------------------------------------------------------------
-export function Background() {
+export function Background({ scrollY: externalScrollY }: { scrollY?: MotionValue<number> } = {}) {
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
-  const { scrollY } = useScroll();
+  const { scrollY: internalScrollY } = useScroll();
+  const scrollY = externalScrollY ?? internalScrollY;
   const y = useTransform(scrollY, [0, 1200], [0, 160]);
   const scale = useTransform(scrollY, [0, 1200], [1, 1.02]);
 

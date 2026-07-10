@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Disallow API routes from indexing
+Disallow: /api/
+
+Sitemap: https://astra.app/sitemap.xml

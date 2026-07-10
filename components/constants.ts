@@ -1,4 +1,8 @@
-export const navItems = ['Features', 'About', 'Roadmap', 'Pricing', 'Blog'];
+export const navItems = [
+  { label: 'Features',     href: '#features' },
+  { label: 'How It Works', href: '#about' },
+  { label: 'Testimonials', href: '#testimonials' },
+] as const;
 
 export const features = [
   {

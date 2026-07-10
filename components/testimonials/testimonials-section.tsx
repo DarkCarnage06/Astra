@@ -6,7 +6,7 @@ import { SectionHeading } from '../ui/section-heading';
 
 export function TestimonialsSection() {
   return (
-    <section id="roadmap" className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
+    <section id="testimonials" className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
       <SectionHeading eyebrow="Testimonials" title="Designed to feel intimate, intelligent, and unmistakably modern." className="mb-12 text-center" />
       <div className="grid gap-6 lg:grid-cols-3">
         {testimonials.map((item, index) => (

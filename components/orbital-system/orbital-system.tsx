@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 // ---------------------------------------------------------------------------
 // OrbitalSystem
@@ -109,6 +109,21 @@ function Ring({ diameter, borderColor, duration, reverse = false, dashed = false
 // Main export
 // ---------------------------------------------------------------------------
 export function OrbitalSystem() {
+  const shouldReduceMotion = useReducedMotion();
+
+  // Minimal static render for prefers-reduced-motion users
+  if (shouldReduceMotion) {
+    return (
+      <div className="relative mx-auto flex h-[340px] w-[340px] items-center justify-center sm:h-[420px] sm:w-[420px] lg:h-[500px] lg:w-[500px]" aria-hidden="true">
+        <div className="relative flex h-48 w-48 items-center justify-center rounded-full border border-white/20 bg-white/5 shadow-[0_0_80px_rgba(212,175,55,0.2)]">
+          <div className="h-28 w-28 rounded-full border border-white/15 bg-white/10 shadow-[0_0_60px_rgba(212,175,55,0.25)]">
+            <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.15),transparent_60%)]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative mx-auto flex h-[340px] w-[340px] items-center justify-center sm:h-[420px] sm:w-[420px] lg:h-[500px] lg:w-[500px]">
 

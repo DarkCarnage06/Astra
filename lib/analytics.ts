@@ -71,8 +71,9 @@ function send(payload: AnalyticsPayload): void {
   if (process.env.NODE_ENV === 'development') {
     console.debug('[Analytics]', payload.event, payload.properties ?? {});
   }
-  // TODO: plug in analytics provider here
+  // Wire up an analytics provider here when ready.
   // Example: posthog.capture(payload.event, payload.properties)
+  // Example: mixpanel.track(payload.event, payload.properties)
 }
 
 export function track(

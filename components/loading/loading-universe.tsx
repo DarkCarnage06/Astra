@@ -1,6 +1,6 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -43,17 +43,26 @@ export function LoadingUniverse({ onComplete, duration = 3800 }: LoadingUniverse
   const [phase, setPhase] = useState(0);
   const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(true);
+  const shouldReduceMotion = useReducedMotion();
 
   // Cycle through phases
   useEffect(() => {
+    if (shouldReduceMotion) return;
     const interval = setInterval(() => {
       setPhase((p) => Math.min(p + 1, PHASES.length - 1));
     }, duration / PHASES.length);
     return () => clearInterval(interval);
-  }, [duration]);
+  }, [duration, shouldReduceMotion]);
 
   // Animate progress bar
   useEffect(() => {
+    if (shouldReduceMotion) {
+      setProgress(1);
+      setVisible(false);
+      onComplete?.();
+      return;
+    }
+
     const start = performance.now();
     let raf: number;
     const tick = (now: number) => {
@@ -71,7 +80,7 @@ export function LoadingUniverse({ onComplete, duration = 3800 }: LoadingUniverse
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [duration, onComplete]);
+  }, [duration, onComplete, shouldReduceMotion]);
 
   return (
     <AnimatePresence>

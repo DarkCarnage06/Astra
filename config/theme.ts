@@ -50,32 +50,36 @@ export const THEME = {
     Pisces:      '#A78BFA',
   } as Record<string, string>,
 
+  /** Element mapping per zodiac sign */
+  elementMap: {
+    Aries: 'Fire', Leo: 'Fire', Sagittarius: 'Fire',
+    Taurus: 'Earth', Virgo: 'Earth', Capricorn: 'Earth',
+    Gemini: 'Air', Libra: 'Air', Aquarius: 'Air',
+    Cancer: 'Water', Scorpio: 'Water', Pisces: 'Water',
+  } as Record<string, string>,
+
   /** Accent color per AI reading theme */
   readingColors: {
-    personality:    '#D4AF37',
-    career:         '#34D399',
-    relationships:  '#F472B6',
-    money:          '#FBBF24',
-    health:         '#6EE7B7',
-    reflection:     '#A78BFA',
-    daily:          '#38BDF8',
+    personality:       '#D4AF37',
+    career:            '#34D399',
+    relationships:     '#F472B6',
+    reflection:        '#A78BFA',
+    daily:             '#38BDF8',
     'hidden-strength': '#F59E0B',
-    'blind-spot':   '#F87171',
-    growth:         '#34D399',
+    'blind-spot':      '#F87171',
+    growth:            '#34D399',
   } as Record<string, string>,
 
   /** Emoji per AI reading theme */
   readingEmojis: {
-    personality:    '🌟',
-    career:         '🏔️',
-    relationships:  '💫',
-    money:          '✨',
-    health:         '🌿',
-    reflection:     '🔮',
-    daily:          '☀️',
+    personality:       '🌟',
+    career:            '🏔️',
+    relationships:     '💫',
+    reflection:        '🔮',
+    daily:             '☀️',
     'hidden-strength': '⚡',
-    'blind-spot':   '🌑',
-    growth:         '🌱',
+    'blind-spot':      '🌑',
+    growth:            '🌱',
   } as Record<string, string>,
 
   animations: {
