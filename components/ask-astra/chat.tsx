@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Sparkles, AlertCircle, Bot, User, Trash2, ArrowRight } from 'lucide-react';
 import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
@@ -131,13 +132,13 @@ export function AskAstraChat() {
         <p className="mt-2 max-w-sm text-sm text-[#B8BCC8]">
           To ask Astra personalized questions about your life, you need to calculate your sidereal birth chart first.
         </p>
-        <a
+        <Link
           href="/birth-form"
           className="mt-5 flex items-center gap-2 rounded-full bg-[#D4AF37] px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-[#D4AF37]/90"
         >
           Generate Chart
           <ArrowRight size={14} />
-        </a>
+        </Link>
       </div>
     );
   }
