@@ -54,7 +54,7 @@ const inputClass =
 const inputErrorClass =
   'w-full rounded-2xl border border-red-400/40 bg-white/5 pl-10 pr-5 py-4 text-white placeholder-white/50 outline-none backdrop-blur-xl transition-all duration-200 focus:border-red-400/60 focus:ring-1 focus:ring-red-400/30 text-sm';
 
-export function LocationAutocomplete({ onLocationSelect, error, disabled }: LocationAutocompleteProps) {
+export function LocationAutocomplete({ onLocationSelect, onInputChange, error, disabled }: LocationAutocompleteProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery] = useDebounce(query, 400);
   const [results, setResults] = useState<PhotonFeature[]>([]);
