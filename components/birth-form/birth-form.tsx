@@ -115,7 +115,7 @@ export function BirthForm() {
   const isFormReady =
     form.name.trim().length > 0 &&
     form.date.length > 0 &&
-    selectedLocation !== null &&
+    form.place.trim().length > 0 &&
     (form.knownTime ? form.time.length > 0 : true);
 
   function advanceStep() {
@@ -157,7 +157,7 @@ export function BirthForm() {
       advanceStep();
       if (!selectedLocation) {
         setGlobalError('Please select a valid birthplace from the suggestions.');
-        throw new Error('No valid location selected');
+        return;
       }
 
       const latitude = selectedLocation.latitude;
@@ -321,7 +321,10 @@ export function BirthForm() {
               <LocationAutocomplete
                 onLocationSelect={(loc) => {
                   setSelectedLocation(loc);
-                  setForm((prev) => ({ ...prev, place: loc ? loc.place : '' }));
+                  setForm((prev) => ({ ...prev, place: loc ? loc.place : prev.place }));
+                }}
+                onInputChange={(val) => {
+                  setForm((prev) => ({ ...prev, place: val }));
                 }}
                 error={fieldErrors.place}
                 disabled={loading}

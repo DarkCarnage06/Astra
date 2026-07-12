@@ -44,6 +44,7 @@ interface PhotonFeature {
 
 interface LocationAutocompleteProps {
   onLocationSelect: (location: LocationResult | null) => void;
+  onInputChange?: (value: string) => void;
   error?: string;
   disabled?: boolean;
 }
@@ -173,6 +174,7 @@ export function LocationAutocomplete({ onLocationSelect, error, disabled }: Loca
     setQuery(e.target.value);
     setHasSelected(false);
     onLocationSelect(null); // Clear selection when user starts typing again
+    if (onInputChange) onInputChange(e.target.value);
   };
 
   return (
