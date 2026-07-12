@@ -39,7 +39,7 @@ function getTemplateContent(category: string): string {
   return PROMPT_TEMPLATES[category as keyof typeof PROMPT_TEMPLATES] || '';
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const { userId: clerkId } = await auth();
   if (!clerkId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

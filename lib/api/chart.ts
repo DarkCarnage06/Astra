@@ -7,14 +7,9 @@
  */
 
 import { trackApiLatency, trackChartGenerated } from '../analytics';
-import type { ChartRequest, ChartResponse, ApiErrorResponse } from '../types/chart';
+import type { ChartResponse, ApiErrorResponse, BirthDetails } from '../types/chart';
 
-// ---------------------------------------------------------------------------
-// API base URL — configured via environment variable
-// ---------------------------------------------------------------------------
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 // ---------------------------------------------------------------------------
 // Error class
@@ -45,7 +40,7 @@ export class ChartApiError extends Error {
  * @throws ChartApiError on API error responses
  * @throws Error on network failure or timeout
  */
-export async function generateChart(request: ChartRequest): Promise<ChartResponse> {
+export async function generateChart(request: BirthDetails): Promise<ChartResponse> {
   const startTime = Date.now();
   const endpoint = '/api/chart';
 
@@ -53,7 +48,7 @@ export async function generateChart(request: ChartRequest): Promise<ChartRespons
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -110,7 +105,7 @@ export async function generateChart(request: ChartRequest): Promise<ChartRespons
 
 export async function pingBackend(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE_URL}/health`, {
+    const response = await fetch('/api/health', {
       method: 'GET',
       signal: AbortSignal.timeout(5_000),
     });

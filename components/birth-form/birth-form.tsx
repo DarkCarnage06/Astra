@@ -5,12 +5,13 @@ import { AlertCircle, ArrowRight, Calendar, Clock, MapPin, Sparkles, User } from
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { geocodePlace, GeocodeError } from '../../lib/api/geocode';
+import { GeocodeError } from '../../lib/api/geocode';
 import { generateChart, ChartApiError } from '../../lib/api/chart';
 import { saveBirthDetails, saveChartResponse } from '../../lib/storage';
 import { validateBirthDetails, sanitizeString } from '../../lib/validators/birthData';
 import { track, ANALYTICS_EVENTS } from '../../lib/analytics';
 import type { BirthDetails } from '../../lib/types/chart';
+import { LocationAutocomplete, LocationResult } from './location-autocomplete';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -99,6 +100,7 @@ export function BirthForm() {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
+  const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null);
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -113,7 +115,7 @@ export function BirthForm() {
   const isFormReady =
     form.name.trim().length > 0 &&
     form.date.length > 0 &&
-    form.place.trim().length > 0 &&
+    selectedLocation !== null &&
     (form.knownTime ? form.time.length > 0 : true);
 
   function advanceStep() {
@@ -151,28 +153,17 @@ export function BirthForm() {
     track(ANALYTICS_EVENTS.FORM_SUBMITTED);
 
     try {
-      // 2. Geocode the place → lat, lng, timezone
+      // 2. Extract location details
       advanceStep();
-      let latitude: number;
-      let longitude: number;
-      let timezone: string;
-      let displayPlace: string;
-
-      try {
-        const geo = await geocodePlace(sanitizeString(form.place));
-        latitude = geo.latitude;
-        longitude = geo.longitude;
-        timezone = geo.timezone;
-        displayPlace = geo.displayName;
-      } catch (err) {
-        if (err instanceof GeocodeError) {
-          setGlobalError(err.message);
-        } else {
-          setGlobalError('Could not locate your birthplace. Please try a more specific name.');
-        }
-        // Do NOT return here — fall through to finally so loading is cleared
-        throw err;
+      if (!selectedLocation) {
+        setGlobalError('Please select a valid birthplace from the suggestions.');
+        throw new Error('No valid location selected');
       }
+
+      const latitude = selectedLocation.latitude;
+      const longitude = selectedLocation.longitude;
+      const timezone = selectedLocation.timezone;
+      const displayPlace = selectedLocation.displayPlace;
 
       // 3. Build complete birth details object
       const birthDetails: BirthDetails = {
@@ -192,13 +183,7 @@ export function BirthForm() {
       advanceStep();
       track(ANALYTICS_EVENTS.CHART_REQUESTED);
 
-      const chart = await generateChart({
-        date: birthDetails.date,
-        time: birthDetails.time,
-        latitude,
-        longitude,
-        timezone,
-      });
+      const chart = await generateChart(birthDetails);
 
       advanceStep();
 
@@ -333,15 +318,12 @@ export function BirthForm() {
 
             {/* Place of birth */}
             <FormField label="Place of Birth" icon={<MapPin size={12} />} index={3} error={fieldErrors.place}>
-              <input
-                id="birth-place"
-                type="text"
-                placeholder="e.g. Mumbai, India"
-                value={form.place}
-                onChange={set('place')}
-                className={fieldErrors.place ? inputErrorClass : inputClass}
-                required
-                autoComplete="off"
+              <LocationAutocomplete
+                onLocationSelect={(loc) => {
+                  setSelectedLocation(loc);
+                  setForm((prev) => ({ ...prev, place: loc ? loc.place : '' }));
+                }}
+                error={fieldErrors.place}
                 disabled={loading}
               />
             </FormField>

@@ -93,7 +93,7 @@ export function AskAstraChat() {
           const errData = await res.json();
           if (errData.message) errMsg = errData.message;
           else if (errData.error) errMsg = errData.error;
-        } catch(e) {}
+        } catch {}
         throw new Error(errMsg);
       }
 
