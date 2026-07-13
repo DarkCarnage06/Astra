@@ -179,14 +179,19 @@ export function PdfDownloadButton() {
       }
 
       // Fetch PDF data from API
-      const res = await fetch('/api/pdf-report', {
+      const url = '/api/pdf-report';
+      console.log(`[PDF Download] Requesting: ${url}`);
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ birth, chart }),
       });
+      console.log(`[PDF Download] Response status: ${res.status}`);
+      const bodyText = await res.text();
+      console.log(`[PDF Download] Response body:`, bodyText);
 
-      if (!res.ok) throw new Error('Failed to generate report');
-      const data: PdfReportData = await res.json();
+      if (!res.ok) throw new Error(`Failed to generate report: status ${res.status}`);
+      const data: PdfReportData = JSON.parse(bodyText);
 
       // Generate HTML content
       const htmlContent = generatePdfContent({ ...data, birth });

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useClerk, useUser } from '@clerk/nextjs';
+import Link from 'next/link';
 import { loadBirthDetails, clearAll } from '../../lib/storage';
 
 const fadeUp = (delay = 0) => ({
@@ -132,22 +133,22 @@ export function SettingsPanel() {
                 <p className="text-sm font-semibold text-white truncate">{birth.displayPlace ?? birth.place}</p>
               </div>
             </div>
-            <a
+            <Link
               href="/birth-form"
               className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#B8BCC8] transition hover:border-white/20 hover:text-white"
             >
               <span>Update Birth Details</span>
               <ChevronRight size={14} />
-            </a>
+            </Link>
           </div>
         ) : (
-          <a
+          <Link
             href="/birth-form"
             className="flex items-center justify-between rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/8 px-4 py-3 text-sm text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
           >
             <span>Generate Your Birth Chart</span>
             <ChevronRight size={14} />
-          </a>
+          </Link>
         )}
       </SettingsSection>
 

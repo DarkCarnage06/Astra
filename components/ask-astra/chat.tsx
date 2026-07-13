@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Sparkles, AlertCircle, Bot, User, Trash2, ArrowRight } from 'lucide-react';
 import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
+import { toast } from '../../lib/toast';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -33,16 +35,25 @@ export function AskAstraChat() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await fetch('/api/ask');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.messages && data.messages.length > 0) {
-            setMessages(data.messages);
-            setSessionId(data.sessionId);
-          }
+        const url = '/api/ask';
+        console.log(`[Chat History] Requesting: ${url}`);
+        const res = await fetch(url);
+        console.log(`[Chat History] Response status: ${res.status}`);
+        const text = await res.text();
+        console.log(`[Chat History] Response body:`, text);
+
+        if (!res.ok) {
+          throw new Error(`Failed to load chat history: status ${res.status} ${text}`);
+        }
+
+        const data = JSON.parse(text);
+        if (data.messages && data.messages.length > 0) {
+          setMessages(data.messages);
+          setSessionId(data.sessionId);
         }
       } catch (err) {
         console.error('Failed to load chat history:', err);
+        toast.error('Failed to load chat history.');
       }
     };
     fetchHistory();
@@ -73,8 +84,17 @@ export function AskAstraChat() {
         return;
       }
 
-      console.log('[Frontend] API called: POST /api/ask');
-      const res = await fetch('/api/ask', {
+      const url = '/api/ask';
+      console.log(`[Chat Query] Requesting: ${url}`);
+      console.log(`[Chat Query] Request Body:`, JSON.stringify({
+        message: userMsg,
+        history: messages,
+        birth,
+        chart,
+        sessionId,
+      }));
+
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,18 +106,22 @@ export function AskAstraChat() {
         }),
       });
 
+      console.log(`[Chat Query] Response status: ${res.status}`);
+      const text = await res.text();
+      console.log(`[Chat Query] Response body:`, text);
+
       if (!res.ok) {
-        let errMsg = 'Failed to get response from Astra.';
+        let errMsg = `Failed to get response from Astra (status ${res.status}).`;
         try {
-          const errData = await res.json();
+          const errData = JSON.parse(text);
           if (errData.message) errMsg = errData.message;
           else if (errData.error) errMsg = errData.error;
-        } catch(e) {}
+        } catch {}
         throw new Error(errMsg);
       }
 
-      const data = await res.json();
-      console.log('[Frontend] API response received', data);
+      const data = JSON.parse(text);
+      console.log('[Frontend] API response parsed', data);
       if (data.sessionId) {
         setSessionId(data.sessionId);
       }
@@ -131,13 +155,13 @@ export function AskAstraChat() {
         <p className="mt-2 max-w-sm text-sm text-[#B8BCC8]">
           To ask Astra personalized questions about your life, you need to calculate your sidereal birth chart first.
         </p>
-        <a
+        <Link
           href="/birth-form"
           className="mt-5 flex items-center gap-2 rounded-full bg-[#D4AF37] px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-[#D4AF37]/90"
         >
           Generate Chart
           <ArrowRight size={14} />
-        </a>
+        </Link>
       </div>
     );
   }

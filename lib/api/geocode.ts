@@ -36,16 +36,23 @@ export async function geocodePlace(place: string): Promise<GeocodeResponse> {
 
   track(ANALYTICS_EVENTS.GEOCODE_REQUESTED, { place: normalized });
 
-  const response = await fetch('/api/geocode', {
+  const url = '/api/geocode';
+  console.log(`[lib/api/geocode] Requesting: ${url}`);
+  console.log(`[lib/api/geocode] Request Body:`, JSON.stringify({ place: normalized }));
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ place: normalized }),
     signal: AbortSignal.timeout(15_000),
   });
 
+  console.log(`[lib/api/geocode] Response status: ${response.status}`);
+  const bodyText = await response.text();
+  console.log(`[lib/api/geocode] Response body:`, bodyText);
+
   if (!response.ok) {
     let errorBody: { error?: string; message?: string } = {};
-    try { errorBody = await response.json(); } catch { /* ignore */ }
+    try { errorBody = JSON.parse(bodyText); } catch { /* ignore */ }
 
     track(ANALYTICS_EVENTS.GEOCODE_FAILED, {
       place: normalized,
@@ -59,7 +66,7 @@ export async function geocodePlace(place: string): Promise<GeocodeResponse> {
     );
   }
 
-  const result: GeocodeResponse = await response.json();
+  const result: GeocodeResponse = JSON.parse(bodyText);
 
   // Cache the result
   saveGeocodeCache(normalized, result, GEOCODE_CACHE_TTL_MS);

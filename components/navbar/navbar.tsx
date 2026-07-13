@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { AnimatePresence, motion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -71,18 +73,18 @@ export function Navbar() {
 
           {/* Desktop CTA buttons */}
           <div className="hidden items-center gap-3 md:flex">
-            <a
-              href="#"
+            <Link
+              href="/sign-in"
               className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:border-white/25 hover:text-white"
             >
               Login
-            </a>
-            <a
-              href="#cta"
+            </Link>
+            <Link
+              href="/sign-up"
               className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
             >
               Get Started
-            </a>
+            </Link>
           </div>
 
           {/* Mobile hamburger button */}
@@ -195,20 +197,20 @@ export function Navbar() {
                 transition={{ delay: 0.28, duration: 0.35 }}
                 className="flex flex-col gap-3 border-t border-white/10 px-6 py-6"
               >
-                <a
-                  href="#"
+                <Link
+                  href="/sign-in"
                   onClick={closeMenu}
                   className="flex items-center justify-center rounded-full border border-white/10 px-5 py-3 text-sm text-white/80 transition hover:border-white/25 hover:text-white"
                 >
                   Login
-                </a>
-                <a
-                  href="#cta"
+                </Link>
+                <Link
+                  href="/sign-up"
                   onClick={closeMenu}
                   className="flex items-center justify-center rounded-full bg-[#D4AF37]/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#D4AF37]/25"
                 >
                   Get Started ✦
-                </a>
+                </Link>
               </motion.div>
 
               {/* Decorative gold gradient accent */}

@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import { X, Sun, Moon, Zap, Gem, FlameKindling, Globe2, Compass, Star } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { loadChartResponse } from '../../lib/storage';
@@ -291,13 +292,13 @@ function EmptyState() {
         <h2 className="mb-2 text-xl font-semibold text-white">No Chart Found</h2>
         <p className="text-sm text-white/50">Generate your birth chart first to see planetary positions.</p>
       </div>
-      <a
+      <Link
         href="/birth-form"
         className="rounded-2xl px-6 py-3 text-sm font-semibold text-[#05060A] transition-opacity hover:opacity-90"
         style={{ background: 'linear-gradient(135deg, #D4AF37, #f0d060)' }}
       >
         Generate Birth Chart →
-      </a>
+      </Link>
     </motion.div>
   );
 }

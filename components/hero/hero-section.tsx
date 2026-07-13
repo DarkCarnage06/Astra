@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { motion, useTransform, type MotionValue } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { OrbitalSystem } from '../orbital-system/orbital-system';
@@ -25,12 +27,12 @@ export function HeroSection({ scrollY }: { scrollY: MotionValue<number> }) {
             Understand your birth chart, ask meaningful questions and explore cosmic patterns through modern AI.
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.95, delay: 0.2 }} className="mt-10 flex flex-col items-center gap-4 sm:flex-row lg:items-start">
-            <a href="/birth-form" className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#D4AF37]/20">
+            <Link href="/birth-form" className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#D4AF37]/20">
               Begin Journey <ArrowRight size={16} />
-            </a>
-            <a href="#features" className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white/90 transition hover:bg-white/10">
+            </Link>
+            <Link href="#features" className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white/90 transition hover:bg-white/10">
               Explore Demo
-            </a>
+            </Link>
           </motion.div>
         </div>
 

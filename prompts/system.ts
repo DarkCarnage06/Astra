@@ -7,7 +7,6 @@
  * Never hardcode personality in a UI component or a service function.
  */
 
-import { PROMPT_CONFIG } from '../config/prompts';
 import type { ChartResponse } from '../lib/types/chart';
 import type { BirthDetails } from '../lib/types/chart';
 

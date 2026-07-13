@@ -7,14 +7,9 @@
  */
 
 import { trackApiLatency, trackChartGenerated } from '../analytics';
-import type { ChartRequest, ChartResponse, ApiErrorResponse } from '../types/chart';
+import type { ChartResponse, ApiErrorResponse, BirthDetails } from '../types/chart';
 
-// ---------------------------------------------------------------------------
-// API base URL — configured via environment variable
-// ---------------------------------------------------------------------------
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 // ---------------------------------------------------------------------------
 // Error class
@@ -45,7 +40,7 @@ export class ChartApiError extends Error {
  * @throws ChartApiError on API error responses
  * @throws Error on network failure or timeout
  */
-export async function generateChart(request: ChartRequest): Promise<ChartResponse> {
+export async function generateChart(request: BirthDetails): Promise<ChartResponse> {
   const startTime = Date.now();
   const endpoint = '/api/chart';
 
@@ -53,7 +48,9 @@ export async function generateChart(request: ChartRequest): Promise<ChartRespons
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    console.log(`[lib/api/chart] Requesting: ${endpoint}`);
+    console.log(`[lib/api/chart] Request Body:`, JSON.stringify(request));
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -63,13 +60,17 @@ export async function generateChart(request: ChartRequest): Promise<ChartRespons
       signal: controller.signal,
     });
 
+    console.log(`[lib/api/chart] Response status: ${response.status}`);
+    const bodyText = await response.text();
+    console.log(`[lib/api/chart] Response body:`, bodyText);
+
     const latencyMs = Date.now() - startTime;
     trackApiLatency(endpoint, latencyMs);
 
     if (!response.ok) {
       let errorBody: ApiErrorResponse;
       try {
-        errorBody = await response.json();
+        errorBody = JSON.parse(bodyText);
       } catch {
         errorBody = {
           error: 'unknown_error',
@@ -84,7 +85,7 @@ export async function generateChart(request: ChartRequest): Promise<ChartRespons
       );
     }
 
-    const chart: ChartResponse = await response.json();
+    const chart: ChartResponse = JSON.parse(bodyText);
     trackChartGenerated(chart.metadata.calculationTimeMs);
     return chart;
   } catch (err) {
@@ -110,12 +111,16 @@ export async function generateChart(request: ChartRequest): Promise<ChartRespons
 
 export async function pingBackend(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE_URL}/health`, {
+    const url = '/api/health';
+    console.log(`[lib/api/chart pingBackend] Requesting: ${url}`);
+    const response = await fetch(url, {
       method: 'GET',
       signal: AbortSignal.timeout(5_000),
     });
+    console.log(`[lib/api/chart pingBackend] Status: ${response.status}`);
     return response.ok;
-  } catch {
+  } catch (err) {
+    console.error('[lib/api/chart pingBackend] Connection failed:', err);
     return false;
   }
 }
