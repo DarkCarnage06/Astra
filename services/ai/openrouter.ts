@@ -118,7 +118,9 @@ export class OpenRouterClient {
     );
 
     try {
-      const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+      const url = `${OPENROUTER_BASE_URL}/chat/completions`;
+      console.log(`[OpenRouter Stream Request] URL: ${url}`);
+      const response = await fetch(url, {
         method: 'POST',
         headers: this._headers(),
         body: JSON.stringify({
@@ -131,8 +133,11 @@ export class OpenRouterClient {
         signal: controller.signal,
       });
 
+      console.log(`[OpenRouter Stream Response] Status: ${response.status}`);
+
       if (!response.ok || !response.body) {
-        throw new AiClientError(response.status, `Stream request failed: ${response.status}`);
+        const errText = response.body ? 'Stream body empty' : `Request failed with status ${response.status}`;
+        throw new AiClientError(response.status, `Stream request failed: ${errText}`);
       }
 
       const reader = response.body.getReader();
@@ -174,7 +179,9 @@ export class OpenRouterClient {
     );
 
     try {
-      const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+      const url = `${OPENROUTER_BASE_URL}/chat/completions`;
+      console.log(`[OpenRouter Complete Request] URL: ${url}`);
+      const response = await fetch(url, {
         method: 'POST',
         headers: this._headers(),
         body: JSON.stringify({
@@ -187,13 +194,16 @@ export class OpenRouterClient {
         signal: controller.signal,
       });
 
+      console.log(`[OpenRouter Complete Response] Status: ${response.status}`);
+      const text = await response.text();
+      console.log(`[OpenRouter Complete Response] Body:`, text);
+
       if (!response.ok) {
         const retryable = response.status === 429 || response.status >= 500;
-        const text = await response.text();
         throw new AiClientError(response.status, `OpenRouter error ${response.status}: ${text}`, retryable);
       }
 
-      const data = await response.json();
+      const data = JSON.parse(text);
       return {
         content: data.choices?.[0]?.message?.content ?? '',
         model: data.model ?? modelId,

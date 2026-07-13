@@ -11,6 +11,7 @@ import { buildChartContext } from '../../../prompts/system';
 import { db } from '../../../lib/db';
 import { MODEL_SETTINGS } from '../../../config/models';
 import { PROMPT_TEMPLATES } from './prompts';
+import { verifyServerEnv } from '../../../lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,13 @@ function getTemplateContent(category: string): string {
 }
 
 export async function GET() {
+  try {
+    verifyServerEnv();
+  } catch (envErr) {
+    console.error('[Backend] Environment error:', envErr);
+    return NextResponse.json({ error: 'configuration_error', message: String(envErr) }, { status: 500 });
+  }
+
   const { userId: clerkId } = await auth();
   if (!clerkId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -74,6 +82,13 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  try {
+    verifyServerEnv();
+  } catch (envErr) {
+    console.error('[Backend] Environment error:', envErr);
+    return NextResponse.json({ error: 'configuration_error', message: String(envErr) }, { status: 500 });
+  }
+
   console.log('[Backend] /api/ask endpoint entered');
   const { userId: clerkId } = await auth();
   if (!clerkId) {

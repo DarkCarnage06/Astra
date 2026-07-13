@@ -2,12 +2,13 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, ArrowRight, Calendar, Clock, MapPin, Sparkles, User } from 'lucide-react';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { GeocodeError } from '../../lib/api/geocode';
+import { GeocodeError, geocodePlace } from '../../lib/api/geocode';
 import { generateChart, ChartApiError } from '../../lib/api/chart';
-import { saveBirthDetails, saveChartResponse } from '../../lib/storage';
+import { saveBirthDetails, saveChartResponse, loadBirthDetails, loadChartResponse } from '../../lib/storage';
+import { toast } from '../../lib/toast';
 import { validateBirthDetails, sanitizeString } from '../../lib/validators/birthData';
 import { track, ANALYTICS_EVENTS } from '../../lib/analytics';
 import type { BirthDetails } from '../../lib/types/chart';
@@ -102,6 +103,39 @@ export function BirthForm() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null);
 
+  // Restore existing birth details and chart from DB or localStorage on mount
+  useEffect(() => {
+    const restoreChart = async () => {
+      try {
+        console.log('[BirthForm] Checking DB for existing birth chart data...');
+        const res = await fetch('/api/chart');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.birthDetails && data.chart) {
+            console.log('[BirthForm] Found saved chart in DB. Restoring and redirecting to dashboard.');
+            saveBirthDetails(data.birthDetails);
+            saveChartResponse(data.chart);
+            toast.success('Your birth chart was restored successfully!');
+            router.replace('/dashboard');
+          }
+        } else {
+          console.log(`[BirthForm] DB check returned status: ${res.status}`);
+        }
+      } catch (err) {
+        console.error('[BirthForm] Restore chart search failed:', err);
+      }
+    };
+
+    const localBirth = loadBirthDetails();
+    const localChart = loadChartResponse();
+    if (localBirth && localChart) {
+      console.log('[BirthForm] Found saved chart in localStorage. Redirecting.');
+      router.replace('/dashboard');
+    } else {
+      restoreChart();
+    }
+  }, [router]);
+
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
@@ -155,15 +189,20 @@ export function BirthForm() {
     try {
       // 2. Extract location details
       advanceStep();
-      if (!selectedLocation) {
-        setGlobalError('Please select a valid birthplace from the suggestions.');
-        return;
-      }
+      let latitude, longitude, timezone, displayPlace;
 
-      const latitude = selectedLocation.latitude;
-      const longitude = selectedLocation.longitude;
-      const timezone = selectedLocation.timezone;
-      const displayPlace = selectedLocation.displayPlace;
+      if (selectedLocation) {
+        latitude = selectedLocation.latitude;
+        longitude = selectedLocation.longitude;
+        timezone = selectedLocation.timezone;
+        displayPlace = selectedLocation.displayPlace;
+      } else {
+        const geo = await geocodePlace(form.place);
+        latitude = geo.latitude;
+        longitude = geo.longitude;
+        timezone = geo.timezone;
+        displayPlace = geo.displayName;
+      }
 
       // 3. Build complete birth details object
       const birthDetails: BirthDetails = {
@@ -196,17 +235,18 @@ export function BirthForm() {
       // 6. Navigate to dashboard
       router.push('/dashboard');
     } catch (err) {
-      // GeocodeError is already handled above — only set a message if one isn't set
+      console.error('[BirthForm] Submission error:', err);
       if (err instanceof GeocodeError) {
-        // globalError already set in inner catch; do nothing
+        setGlobalError(err.message);
+        toast.error(err.message);
       } else if (err instanceof ChartApiError) {
-        if (err.statusCode === 0) {
-          setGlobalError('Cannot reach the ASTRA server. Is the backend running?');
-        } else {
-          setGlobalError(err.message);
-        }
+        const msg = err.statusCode === 0 ? 'Cannot reach the ASTRA server. Is the backend running?' : err.message;
+        setGlobalError(msg);
+        toast.error(msg);
       } else {
-        setGlobalError('Something went wrong. Please try again.');
+        const msg = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+        setGlobalError(msg);
+        toast.error(msg);
       }
     } finally {
       setLoading(false);

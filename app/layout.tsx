@@ -64,6 +64,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { ToastContainer } from '../components/toast/toast-container';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
@@ -77,6 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Skip to main content
           </a>
           {children}
+          <ToastContainer />
         </body>
       </html>
     </ClerkProvider>

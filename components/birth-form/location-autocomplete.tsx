@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Search, Loader2 } from 'lucide-react';
+import { toast } from '../../lib/toast';
 function useDebounce<T>(value: T, delay: number): [T] {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -87,18 +88,27 @@ export function LocationAutocomplete({ onLocationSelect, onInputChange, error, d
     const searchPlaces = async () => {
       setIsSearching(true);
       try {
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(debouncedQuery)}&limit=7`;
+        console.log(`[LocationAutocomplete] Requesting search: ${url}`);
         const res = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(debouncedQuery)}&limit=7`,
+          url,
           { signal: AbortSignal.timeout(5000) }
         );
-        if (res.ok) {
-          const data = await res.json();
-          setResults(data.features || []);
-          setIsOpen(true);
-          setSelectedIndex(-1);
+        console.log(`[LocationAutocomplete] Search response status: ${res.status}`);
+        const bodyText = await res.text();
+        console.log(`[LocationAutocomplete] Search response body:`, bodyText);
+
+        if (!res.ok) {
+          throw new Error(`Photon search failed with status ${res.status}: ${bodyText}`);
         }
+
+        const data = JSON.parse(bodyText);
+        setResults(data.features || []);
+        setIsOpen(true);
+        setSelectedIndex(-1);
       } catch (err) {
         console.error('Failed to search places', err);
+        toast.error('Failed to fetch location search results.');
       } finally {
         setIsSearching(false);
       }
@@ -139,13 +149,21 @@ export function LocationAutocomplete({ onLocationSelect, onInputChange, error, d
     setIsResolvingTimezone(true);
 
     try {
-      const tzRes = await fetch(`https://timeapi.io/api/TimeZone/coordinate?latitude=${lat}&longitude=${lon}`);
+      const tzUrl = `https://timeapi.io/api/TimeZone/coordinate?latitude=${lat}&longitude=${lon}`;
+      console.log(`[LocationAutocomplete] Requesting timezone: ${tzUrl}`);
+      const tzRes = await fetch(tzUrl, { signal: AbortSignal.timeout(6000) });
+      console.log(`[LocationAutocomplete] Timezone response status: ${tzRes.status}`);
+      const tzText = await tzRes.text();
+      console.log(`[LocationAutocomplete] Timezone response body:`, tzText);
+
       let timezone = 'UTC';
       if (tzRes.ok) {
-        const tzData = await tzRes.json();
+        const tzData = JSON.parse(tzText);
         if (tzData?.timeZone) {
           timezone = tzData.timeZone;
         }
+      } else {
+        toast.error(`Timezone API error (${tzRes.status}). Defaulting to UTC.`);
       }
 
       onLocationSelect({
@@ -157,6 +175,7 @@ export function LocationAutocomplete({ onLocationSelect, onInputChange, error, d
       });
     } catch (err) {
       console.error('Failed to resolve timezone', err);
+      toast.error('Connection to timezone service failed. Defaulting to UTC.');
       // Fallback to UTC if timezone fails, user will be warned later if needed
       onLocationSelect({
         place: displayPlace,

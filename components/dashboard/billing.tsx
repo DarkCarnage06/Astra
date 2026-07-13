@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Crown, Zap, Star, Check, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { PLANS, type PlanKey } from '../../lib/razorpay';
+import { toast } from '../../lib/toast';
 
 declare global {
   interface Window {
@@ -51,14 +52,23 @@ export function BillingPlans({ currentPlan = 'FREE' }: { currentPlan?: string })
     setLoading(planKey);
     try {
       // Create Razorpay order
-      const res = await fetch('/api/payment/create-order', {
+      const createOrderUrl = '/api/payment/create-order';
+      console.log(`[Billing Create Order] Requesting: ${createOrderUrl}`);
+      const res = await fetch(createOrderUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: planKey }),
       });
 
-      if (!res.ok) throw new Error('Failed to create order');
-      const { orderId, amount, currency, keyId } = await res.json();
+      console.log(`[Billing Create Order] Status: ${res.status}`);
+      const bodyText = await res.text();
+      console.log(`[Billing Create Order] Body:`, bodyText);
+
+      if (!res.ok) {
+        throw new Error(`Failed to create order: status ${res.status}`);
+      }
+
+      const { orderId, amount, currency, keyId } = JSON.parse(bodyText);
 
       const options = {
         key: keyId,
@@ -69,13 +79,28 @@ export function BillingPlans({ currentPlan = 'FREE' }: { currentPlan?: string })
         order_id: orderId,
         handler: async (response: Record<string, string>) => {
           // Verify payment
-          const verifyRes = await fetch('/api/payment/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...response, plan: planKey }),
-          });
-          if (verifyRes.ok) {
-            window.location.reload();
+          try {
+            const verifyUrl = '/api/payment/verify';
+            console.log(`[Billing Payment Verify] Requesting: ${verifyUrl}`);
+            const verifyRes = await fetch(verifyUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...response, plan: planKey }),
+            });
+
+            console.log(`[Billing Payment Verify] Status: ${verifyRes.status}`);
+            const verifyText = await verifyRes.text();
+            console.log(`[Billing Payment Verify] Body:`, verifyText);
+
+            if (verifyRes.ok) {
+              toast.success('Payment completed successfully!');
+              window.location.reload();
+            } else {
+              throw new Error(`Verification endpoint failed with status ${verifyRes.status}`);
+            }
+          } catch (verErr) {
+            console.error('[Billing Payment Verify] Verification error:', verErr);
+            toast.error('Payment verification failed. Please contact support.');
           }
         },
         prefill: {},
@@ -87,6 +112,8 @@ export function BillingPlans({ currentPlan = 'FREE' }: { currentPlan?: string })
       rzp.open();
     } catch (err) {
       console.error('Payment error:', err);
+      const msg = err instanceof Error ? err.message : 'Unknown payment initialization error';
+      toast.error(`Payment initialization failed: ${msg}`);
     } finally {
       setLoading(null);
     }

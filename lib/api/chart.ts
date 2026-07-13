@@ -48,6 +48,8 @@ export async function generateChart(request: BirthDetails): Promise<ChartRespons
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
   try {
+    console.log(`[lib/api/chart] Requesting: ${endpoint}`);
+    console.log(`[lib/api/chart] Request Body:`, JSON.stringify(request));
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -58,13 +60,17 @@ export async function generateChart(request: BirthDetails): Promise<ChartRespons
       signal: controller.signal,
     });
 
+    console.log(`[lib/api/chart] Response status: ${response.status}`);
+    const bodyText = await response.text();
+    console.log(`[lib/api/chart] Response body:`, bodyText);
+
     const latencyMs = Date.now() - startTime;
     trackApiLatency(endpoint, latencyMs);
 
     if (!response.ok) {
       let errorBody: ApiErrorResponse;
       try {
-        errorBody = await response.json();
+        errorBody = JSON.parse(bodyText);
       } catch {
         errorBody = {
           error: 'unknown_error',
@@ -79,7 +85,7 @@ export async function generateChart(request: BirthDetails): Promise<ChartRespons
       );
     }
 
-    const chart: ChartResponse = await response.json();
+    const chart: ChartResponse = JSON.parse(bodyText);
     trackChartGenerated(chart.metadata.calculationTimeMs);
     return chart;
   } catch (err) {
@@ -105,12 +111,16 @@ export async function generateChart(request: BirthDetails): Promise<ChartRespons
 
 export async function pingBackend(): Promise<boolean> {
   try {
-    const response = await fetch('/api/health', {
+    const url = '/api/health';
+    console.log(`[lib/api/chart pingBackend] Requesting: ${url}`);
+    const response = await fetch(url, {
       method: 'GET',
       signal: AbortSignal.timeout(5_000),
     });
+    console.log(`[lib/api/chart pingBackend] Status: ${response.status}`);
     return response.ok;
-  } catch {
+  } catch (err) {
+    console.error('[lib/api/chart pingBackend] Connection failed:', err);
     return false;
   }
 }

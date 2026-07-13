@@ -18,7 +18,8 @@ import {
 import { useEffect, useState, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
+import { loadBirthDetails, loadChartResponse, saveBirthDetails, saveChartResponse } from '../../lib/storage';
+import { toast } from '../../lib/toast';
 import { getCachedReadings, setCachedReadings } from '../../services/ai/cache';
 import { track, ANALYTICS_EVENTS } from '../../lib/analytics';
 import { THEME } from '../../config/theme';
@@ -212,18 +213,41 @@ export function Dashboard() {
   // Load birth + chart from localStorage on mount
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    const storedBirth = loadBirthDetails();
-    const storedChart = loadChartResponse();
+    const restoreOrRedirect = async () => {
+      const storedBirth = loadBirthDetails();
+      const storedChart = loadChartResponse();
 
-    if (!storedBirth || !storedChart) {
-      // No data — send back to form
+      if (storedBirth && storedChart) {
+        setBirth(storedBirth);
+        setChart(storedChart);
+        track(ANALYTICS_EVENTS.DASHBOARD_VIEWED);
+        return;
+      }
+
+      try {
+        console.log('[Dashboard] LocalStorage empty. Attempting to fetch chart from DB...');
+        const res = await fetch('/api/chart');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.birthDetails && data.chart) {
+            console.log('[Dashboard] Restored chart from DB. Updating LocalStorage.');
+            saveBirthDetails(data.birthDetails);
+            saveChartResponse(data.chart);
+            setBirth(data.birthDetails);
+            setChart(data.chart);
+            track(ANALYTICS_EVENTS.DASHBOARD_VIEWED);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('[Dashboard] Error restoring chart from DB:', err);
+      }
+
+      console.warn('[Dashboard] Restoring failed. Redirecting to /birth-form.');
       router.replace('/birth-form');
-      return;
-    }
+    };
 
-    setBirth(storedBirth);
-    setChart(storedChart);
-    track(ANALYTICS_EVENTS.DASHBOARD_VIEWED);
+    restoreOrRedirect();
   }, [router]);
 
   // ---------------------------------------------------------------------------
@@ -275,6 +299,7 @@ export function Dashboard() {
 
     if (collected.length === 0) {
       setReadingsError('AI readings could not be generated. Your chart data is still accurate.');
+      toast.error('AI readings could not be generated.');
     } else {
       // Cache the completed set
       const readingSet: AiReadingSet = {

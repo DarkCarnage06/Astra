@@ -21,7 +21,7 @@ import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
 import { THEME } from '../../config/theme';
 import type { ChartResponse, GeocodeResponse } from '../../lib/types/chart';
 import type { AiReading } from '../../lib/types/chart';
-import { apiUrl } from '../../lib/api';
+import { toast } from '../../lib/toast';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -342,15 +342,27 @@ export function CompatibilityTool() {
     setGeocoding(true);
     setGeocodeError(null);
     try {
-      const res = await fetch('/api/geocode', {
+      const url = '/api/geocode';
+      console.log(`[Compatibility Geocode] Requesting: ${url}`);
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ place }),
       });
-      if (!res.ok) throw new Error('Geocode failed');
-      return (await res.json()) as GeocodeResponse;
-    } catch {
-      setGeocodeError('Could not find that location. Please try a more specific place name.');
+      console.log(`[Compatibility Geocode] Response status: ${res.status}`);
+      const text = await res.text();
+      console.log(`[Compatibility Geocode] Response body:`, text);
+
+      if (!res.ok) {
+        throw new Error(`Geocode failed with status ${res.status}: ${text}`);
+      }
+
+      return JSON.parse(text) as GeocodeResponse;
+    } catch (err) {
+      console.error('[Compatibility Geocode] Error:', err);
+      const msg = err instanceof Error ? err.message : 'Could not find that location. Please try a more specific place name.';
+      setGeocodeError(msg);
+      toast.error(msg);
       return null;
     } finally {
       setGeocoding(false);
@@ -387,25 +399,40 @@ export function CompatibilityTool() {
       return;
     }
 
-    // Step 2: Fetch partner chart from FastAPI
+    // Step 2: Fetch partner chart from Next.js proxy route with persist=false
     try {
-      const chartRes = await fetch(apiUrl('/api/chart'), {
+      const url = '/api/chart';
+      const body = {
+        name: form.name,
+        date: form.date,
+        time: form.knownTime ? form.time : '12:00',
+        place: form.place,
+        knownTime: form.knownTime,
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        timezone: geo.timezone,
+        displayPlace: geo.displayName,
+        persist: false,
+      };
+
+      console.log(`[Compatibility Chart] Requesting: ${url}`);
+      console.log(`[Compatibility Chart] Request body:`, JSON.stringify(body));
+
+      const chartRes = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: form.date,
-          time: form.knownTime ? form.time : '12:00',
-          latitude: geo.latitude,
-          longitude: geo.longitude,
-          timezone: geo.timezone,
-        }),
+        body: JSON.stringify(body),
       });
 
+      console.log(`[Compatibility Chart] Response status: ${chartRes.status}`);
+      const chartText = await chartRes.text();
+      console.log(`[Compatibility Chart] Response body:`, chartText);
+
       if (!chartRes.ok) {
-        throw new Error(`Chart API error: ${chartRes.status}`);
+        throw new Error(`Chart API returned status ${chartRes.status}: ${chartText}`);
       }
 
-      const chart2: ChartResponse = await chartRes.json();
+      const chart2: ChartResponse = JSON.parse(chartText);
       setPartnerChart(chart2);
 
       // Step 3: Compute scores
@@ -418,7 +445,9 @@ export function CompatibilityTool() {
       setPhase('results');
 
       try {
-        const narRes = await fetch('/api/compatibility-reading', {
+        const compUrl = '/api/compatibility-reading';
+        console.log(`[Compatibility Narrative] Requesting: ${compUrl}`);
+        const narRes = await fetch(compUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -428,17 +457,29 @@ export function CompatibilityTool() {
             name2: form.name,
           }),
         });
+
+        console.log(`[Compatibility Narrative] Response status: ${narRes.status}`);
+        const narText = await narRes.text();
+        console.log(`[Compatibility Narrative] Response body:`, narText);
+
         if (narRes.ok) {
-          setNarrative(await narRes.json());
+          setNarrative(JSON.parse(narText));
+        } else {
+          console.warn(`[Compatibility Narrative] Failed with status ${narRes.status}`);
+          toast.error('AI compatibility narrative could not be generated.');
         }
-      } catch {
-        // Narrative is optional — don't block results
+      } catch (narErr) {
+        console.error('[Compatibility Narrative] Error:', narErr);
+        toast.error('Connection failed generating AI compatibility narrative.');
       } finally {
         setNarrativeLoading(false);
       }
     } catch (err) {
+      console.error('[Compatibility Chart] Error:', err);
       setPhase('form');
-      setError(`Could not generate partner chart: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Could not generate partner chart: ${msg}`);
+      toast.error(`Partner chart generation failed: ${msg}`);
     }
   }
 
