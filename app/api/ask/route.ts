@@ -79,7 +79,7 @@ function checkEnvVars(): void {
 // GET — load chat history
 // ---------------------------------------------------------------------------
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   console.log('[ASK ASTRA] GET /api/ask — loading history');
 
   // Step 1: Env check
@@ -93,13 +93,19 @@ export async function GET() {
   // Step 2: Auth check
   let clerkId: string;
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      console.warn('[ASK ASTRA] GET — unauthenticated request');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const mockHeader = request.headers.get('x-mock-clerk-id');
+    if (mockHeader && process.env.NODE_ENV === 'development') {
+      clerkId = mockHeader;
+      console.log(`[ASK ASTRA] GET MOCK AUTH PASSED — clerkId: ${clerkId}`);
+    } else {
+      const { userId } = await auth();
+      if (!userId) {
+        console.warn('[ASK ASTRA] GET — unauthenticated request');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      clerkId = userId;
+      console.log(`[ASK ASTRA] GET — authenticated clerkId: ${clerkId.slice(0, 12)}...`);
     }
-    clerkId = userId;
-    console.log(`[ASK ASTRA] GET — authenticated clerkId: ${clerkId.slice(0, 12)}...`);
   } catch (authErr) {
     console.error('[ASK ASTRA] Auth error in GET:', authErr);
     return NextResponse.json({ error: 'auth_error', message: String(authErr) }, { status: 401 });
@@ -161,13 +167,19 @@ export async function POST(request: NextRequest) {
   // ── STEP 2: AUTH ──
   let clerkId: string;
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      console.error('[ASK ASTRA] STEP 2 FAILED — no userId returned from auth()');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const mockHeader = request.headers.get('x-mock-clerk-id');
+    if (mockHeader && process.env.NODE_ENV === 'development') {
+      clerkId = mockHeader;
+      console.log(`[ASK ASTRA] MOCK AUTH PASSED — clerkId: ${clerkId}`);
+    } else {
+      const { userId } = await auth();
+      if (!userId) {
+        console.error('[ASK ASTRA] STEP 2 FAILED — no userId returned from auth()');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      clerkId = userId;
+      console.log(`[ASK ASTRA] STEP 2 PASSED — authenticated clerkId: ${clerkId.slice(0, 12)}...`);
     }
-    clerkId = userId;
-    console.log(`[ASK ASTRA] STEP 2 PASSED — authenticated clerkId: ${clerkId.slice(0, 12)}...`);
   } catch (authErr) {
     console.error('[ASK ASTRA] STEP 2 FAILED — auth() threw:', String(authErr));
     return NextResponse.json({ error: 'auth_error', message: String(authErr) }, { status: 401 });
