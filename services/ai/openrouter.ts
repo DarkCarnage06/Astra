@@ -213,9 +213,22 @@ export class OpenRouterClient {
     } catch (err) {
       if (err instanceof AiClientError) throw err;
       if (err instanceof Error && err.name === 'AbortError') {
-        throw new AiClientError(408, 'Request timed out', true);
+        throw new AiClientError(
+          408,
+          '[OpenRouter] Request timed out after ' + MODEL_SETTINGS.timeoutMs + 'ms. The AI model may be overloaded.',
+          true,
+        );
       }
-      throw new AiClientError(0, 'Network error', true);
+      // Preserve the actual error message — never swallow it as generic "Network error"
+      const actualMsg = err instanceof Error ? err.message : String(err);
+      const actualStack = err instanceof Error ? err.stack : undefined;
+      console.error('[OpenRouter] _sendRequest caught unexpected error:', actualMsg);
+      console.error('[OpenRouter] Stack:', actualStack);
+      throw new AiClientError(
+        0,
+        `[OpenRouter] Unexpected error during AI request: ${actualMsg}`,
+        true,
+      );
     } finally {
       clearTimeout(timeoutId);
     }
@@ -235,6 +248,9 @@ export class OpenRouterClient {
 let _client: OpenRouterClient | null = null;
 
 export function getOpenRouterClient(): OpenRouterClient {
-  if (!_client) _client = new OpenRouterClient();
+  // Re-create if the API key has changed (e.g., during dev hot reload)
+  if (!_client || !process.env.OPENROUTER_API_KEY) {
+    _client = new OpenRouterClient();
+  }
   return _client;
 }

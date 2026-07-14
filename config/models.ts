@@ -28,11 +28,20 @@ export const MODEL_SETTINGS = {
   /** Max tokens for a full summary reading */
   maxTokensSummary: 600,
 
-  /** Request timeout in milliseconds */
-  timeoutMs: 30_000,
+  /**
+   * Request timeout in milliseconds.
+   * Keep below Vercel's function timeout (10s hobby, 60s Pro) so the route
+   * handler can catch the error and return a proper JSON response before
+   * the platform kills the function with a silent 504/500.
+   */
+  timeoutMs: 25_000,
 
-  /** Number of retry attempts on transient failure */
-  maxRetries: 2,
+  /**
+   * Number of retry attempts on transient failure.
+   * Keep low: each retry can take up to timeoutMs.
+   * 1 retry = max 2 × 25s = 50s, within Vercel Pro's 60s limit.
+   */
+  maxRetries: 1,
 
   /** Delay between retries (ms) — exponential backoff multiplier */
   retryBaseDelayMs: 1_000,
