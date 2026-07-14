@@ -8,7 +8,15 @@ import type { Plan } from '@prisma/client';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  const { userId: clerkId } = await auth();
+  let clerkId: string | null = null;
+  const mockHeader = request.headers.get('x-mock-clerk-id');
+  if (mockHeader && process.env.NODE_ENV === 'development') {
+    clerkId = mockHeader;
+  } else {
+    const { userId } = await auth();
+    clerkId = userId;
+  }
+
   if (!clerkId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

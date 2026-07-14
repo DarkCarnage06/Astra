@@ -1,11 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  const { userId: clerkId } = await auth();
+export async function GET(request: NextRequest) {
+  let clerkId: string | null = null;
+  const mockHeader = request.headers.get('x-mock-clerk-id');
+  if (mockHeader && process.env.NODE_ENV === 'development') {
+    clerkId = mockHeader;
+  } else {
+    const { userId } = await auth();
+    clerkId = userId;
+  }
+
   if (!clerkId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
