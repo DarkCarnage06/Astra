@@ -140,13 +140,13 @@ export async function POST(request: NextRequest) {
 
     // Capture the exact error response message from Razorpay API
     const errorMsg = errObj.description || (errObj.message as string) || String(rzpErr);
-    return NextResponse.json(
-      {
-        error: 'Razorpay order creation failed',
-        details: errorMsg,
-        ...(errObj.error && { raw: errObj.error }),
-      },
-      { status: 400 }
-    );
+    const responsePayload: Record<string, unknown> = {
+      error: 'Razorpay order creation failed',
+      details: errorMsg,
+    };
+    if (errObj.error) {
+      responsePayload.raw = errObj.error;
+    }
+    return NextResponse.json(responsePayload, { status: 400 });
   }
 }
