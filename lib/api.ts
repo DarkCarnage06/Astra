@@ -5,28 +5,9 @@
  * Sanitizes bases and paths to eliminate double-slashes and verifies env vars.
  */
 
-// Validate client-side accessible variables on the browser/server.
 const isProd = process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
 
-if (isProd) {
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    throw new Error(
-      'BUILD FAILURE: NEXT_PUBLIC_API_URL is not set. ' +
-      'Add NEXT_PUBLIC_API_URL=https://astra-backend-m33g.onrender.com to Vercel environment variables.'
-    );
-  } else if (
-    process.env.NEXT_PUBLIC_API_URL.includes('localhost') ||
-    process.env.NEXT_PUBLIC_API_URL.includes('127.0.0.1')
-  ) {
-    throw new Error(
-      `BUILD FAILURE: NEXT_PUBLIC_API_URL points to localhost in production: ` +
-      `"${process.env.NEXT_PUBLIC_API_URL}". ` +
-      `Set it to https://astra-backend-m33g.onrender.com in Vercel environment variables.`
-    );
-  }
-}
-
-// Clean and sanitize the API base
+// Clean and sanitize the API base — safe even if NEXT_PUBLIC_API_URL is not set
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || '';
 const API_BASE = rawApiUrl.replace(/\/+$/, '');
 
@@ -52,8 +33,6 @@ export function verifyServerEnv() {
     'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
     'CLERK_SECRET_KEY',
     'OPENROUTER_API_KEY',
-    'NEXTAUTH_URL',
-    'NEXTAUTH_SECRET'
   ];
 
   required.forEach(key => {

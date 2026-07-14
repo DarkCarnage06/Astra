@@ -225,7 +225,7 @@ export class OpenRouterClient {
     return {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${this.apiKey}`,
-      'HTTP-Referer': 'https://astra.app',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://astra-eta-self.vercel.app',
       'X-Title': 'ASTRA — Self-Reflection Platform',
     };
   }
