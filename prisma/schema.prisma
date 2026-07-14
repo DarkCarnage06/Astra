@@ -33,6 +33,7 @@ model User {
   chatSessions ChatSession[]
   subscription Subscription?
   feedback     Feedback[]
+  invoices     Invoice[]
 
   @@index([clerkId])
 }
@@ -184,4 +185,46 @@ enum SubStatus {
   CANCELLED
   EXPIRED
   PENDING
+}
+
+// ---------------------------------------------------------------------------
+// Invoice — generated upon successful payment
+// ---------------------------------------------------------------------------
+model Invoice {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int      // in paise (INR)
+  currency  String   @default("INR")
+  plan      Plan
+  orderId   String
+  paymentId String
+  status    String   // "PAID" | "REFUNDED"
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Coupon — promo codes for discounts
+// ---------------------------------------------------------------------------
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  discountPct Int      // percentage discount
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Referral — tracks user invites and rewards
+// ---------------------------------------------------------------------------
+model Referral {
+  id             String   @id @default(cuid())
+  referrerId     String
+  referredId     String   @unique
+  code           String
+  rewardClaimed  Boolean  @default(false)
+  createdAt      DateTime @default(now())
 }

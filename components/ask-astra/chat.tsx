@@ -27,6 +27,8 @@ export function AskAstraChat() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<'FREE' | 'PRO' | 'PREMIUM'>('FREE');
+  const [isLocked, setIsLocked] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -65,8 +67,32 @@ export function AskAstraChat() {
         toast.error('Failed to load chat history.');
       }
     };
+
+    const fetchPlan = async () => {
+      try {
+        const res = await fetch('/api/payment/history');
+        if (res.ok) {
+          const data = await res.json();
+          setUserPlan(data.plan);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user plan details:', err);
+      }
+    };
+
     fetchHistory();
+    fetchPlan();
   }, []);
+
+  useEffect(() => {
+    const userMsgCount = messages.filter((m) => m.role === 'user').length;
+    if (userPlan === 'FREE' && userMsgCount >= 5) {
+      setIsLocked(true);
+      setError("You've used your free questions. Upgrade to ASTRA PRO to continue.");
+    } else {
+      setIsLocked(false);
+    }
+  }, [messages, userPlan]);
 
   useEffect(() => {
     scrollToBottom();
@@ -114,6 +140,9 @@ export function AskAstraChat() {
       console.log(`[Chat Query] Response body:`, text);
 
       if (!res.ok) {
+        if (res.status === 403) {
+          setIsLocked(true);
+        }
         let errMsg = `Server error (HTTP ${res.status})`;
         try {
           const errData = JSON.parse(text);
@@ -353,9 +382,22 @@ export function AskAstraChat() {
           )}
 
           {error && (
-            <div className="flex items-start gap-2.5 rounded-2xl border border-red-400/20 bg-red-400/8 p-4 text-xs text-red-400">
-              <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
-              <span>{error}</span>
+            <div className="flex flex-col gap-3 rounded-2xl border border-red-400/20 bg-red-400/8 p-4 text-xs text-red-400">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+              {isLocked && (
+                <div className="mt-1">
+                  <Link
+                    href="/dashboard/billing"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#D4AF37] px-4 py-2 text-xs font-bold text-black hover:bg-[#D4AF37]/90 transition"
+                  >
+                    Upgrade to ASTRA PRO
+                    <ArrowRight size={12} />
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </AnimatePresence>
@@ -372,13 +414,14 @@ export function AskAstraChat() {
       >
         <input
           value={input}
+          disabled={isLocked || loading}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask Astra about your chart..."
-          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white placeholder-[#B8BCC8]/50 outline-none transition focus:border-[#D4AF37]/40 focus:ring-1 focus:ring-[#D4AF37]/20"
+          placeholder={isLocked ? "Chat locked. Please upgrade to continue." : "Ask Astra about your chart..."}
+          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white placeholder-[#B8BCC8]/50 outline-none transition focus:border-[#D4AF37]/40 focus:ring-1 focus:ring-[#D4AF37]/20 disabled:opacity-50"
         />
         <button
           type="submit"
-          disabled={!input.trim() || loading}
+          disabled={!input.trim() || loading || isLocked}
           className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#D4AF37] text-black transition hover:bg-[#D4AF37]/90 disabled:opacity-50"
         >
           <Send size={15} />

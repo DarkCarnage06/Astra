@@ -8,6 +8,7 @@ import { Star } from 'lucide-react';
 import { loadChartResponse } from '../../../lib/storage';
 import type { ChartResponse } from '../../../lib/types/chart';
 
+import PremiumLock from '../../../components/dashboard/premium-lock';
 // Lazy load RemediesDashboard for performance optimization
 const RemediesDashboard = dynamic(() => import('../../../components/dashboard/remedies'), {
   loading: () => (
@@ -34,7 +35,11 @@ export default function RemediesPage() {
     return <EmptyState />;
   }
 
-  return <RemediesDashboard chart={chart} />;
+  return (
+    <PremiumLock requiredPlan="PRO">
+      <RemediesDashboard chart={chart} />
+    </PremiumLock>
+  );
 }
 
 function EmptyState() {

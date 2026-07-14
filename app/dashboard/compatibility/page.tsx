@@ -1,5 +1,7 @@
 import { CompatibilityTool } from '../../../components/dashboard/compatibility';
 
+import PremiumLock from '../../../components/dashboard/premium-lock';
+
 export const metadata = {
   title: 'Compatibility Analysis',
   description: 'Analyze your astrological compatibility with your partner.',
@@ -8,7 +10,9 @@ export const metadata = {
 export default function CompatibilityPage() {
   return (
     <div className="relative px-6 py-8 lg:px-10">
-      <CompatibilityTool />
+      <PremiumLock requiredPlan="PREMIUM">
+        <CompatibilityTool />
+      </PremiumLock>
     </div>
   );
 }

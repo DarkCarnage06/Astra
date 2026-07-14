@@ -185,6 +185,39 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'auth_error', message: String(authErr) }, { status: 401 });
   }
 
+  // ── STEP 2.5: PLAN CHECK & LIFETIME QUESTION LIMITS ──
+  try {
+    const user = await db.user.findUnique({
+      where: { clerkId },
+      select: { id: true, plan: true }
+    });
+
+    if (user && user.plan === 'FREE') {
+      const userMessageCount = await db.chatMessage.count({
+        where: {
+          session: {
+            userId: user.id
+          },
+          role: 'user'
+        }
+      });
+
+      console.log(`[ASK ASTRA] Limit Check — FREE user has asked ${userMessageCount} user questions.`);
+      if (userMessageCount >= 5) {
+        console.warn(`[ASK ASTRA] User ${user.id} has reached free lifetime limit.`);
+        return NextResponse.json(
+          {
+            error: 'limit_reached',
+            message: "You've used your free questions. Upgrade to ASTRA PRO to continue."
+          },
+          { status: 403 }
+        );
+      }
+    }
+  } catch (err) {
+    console.error('[ASK ASTRA] Limit check database query failed:', err);
+  }
+
   // ── STEP 3: PARSE REQUEST BODY ──
   let message: string;
   let history: { role: 'user' | 'assistant'; content: string }[];

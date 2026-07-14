@@ -1,8 +1,3 @@
-/**
- * lib/razorpay.ts
- * Razorpay server-side client (test mode).
- */
-
 import Razorpay from 'razorpay';
 
 let _client: Razorpay | null = null;
@@ -24,37 +19,39 @@ export const PLANS = {
     price: 0,
     currency: 'INR',
     features: [
-      '1 Birth Chart',
-      '5 AI Questions / day',
-      'Daily Cosmic Brief',
-      'Basic Dasha Timeline',
+      'Vedic Birth Chart',
+      'Dashboard Access',
+      '5 lifetime Ask Astra questions',
+      'Basic AI summary of your chart',
     ],
   },
   PRO: {
     id: 'pro',
     name: 'Pro',
-    price: 49900, // ₹499 in paise
+    price: 2500, // ₹25 in paise
     currency: 'INR',
     features: [
-      'Unlimited AI Questions',
-      'Full Planet Dashboard',
-      'Compatibility Analysis',
-      'PDF Report Download',
-      'Priority Support',
+      'Unlimited Ask Astra questions',
+      'Auspicous Yogas detection',
+      'Local Doshas analysis',
+      'Personalized Traditional Remedies',
+      'Suitable Gemstone suggestions',
+      'PDF report downloads',
+      'Vimshottari Dasha timeline',
     ],
   },
   PREMIUM: {
     id: 'premium',
     name: 'Premium',
-    price: 99900, // ₹999 in paise
+    price: 5000, // ₹50 in paise
     currency: 'INR',
     features: [
-      'Everything in Pro',
-      'Advanced Transit Analysis',
-      'Yearly Predictions',
-      'Partner Chart Comparison',
-      'WhatsApp Notifications',
-      'Early Access to New Features',
+      'Everything in Pro plan',
+      'Astrological Chart Compatibility',
+      'Advanced AI Reports',
+      'Planetary Transit analysis',
+      'Daily personalized horoscope forecasts',
+      'Access to all future premium insights',
     ],
   },
 } as const;

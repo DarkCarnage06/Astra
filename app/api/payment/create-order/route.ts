@@ -1,11 +1,7 @@
-/**
- * app/api/payment/create-order/route.ts
- * Creates a Razorpay order for plan upgrades.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getRazorpay, PLANS, type PlanKey } from '../../../../lib/razorpay';
+import { db } from '../../../../lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +12,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { plan } = body as { plan: PlanKey };
+  const { plan, couponCode } = body as { plan: PlanKey; couponCode?: string };
 
   if (!plan || !PLANS[plan] || PLANS[plan].price === 0) {
     return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
@@ -29,9 +25,21 @@ export async function POST(request: NextRequest) {
   try {
     const razorpay = getRazorpay();
     const planData = PLANS[plan];
+    let price: number = planData.price;
+
+    // Validate coupon and apply discount
+    if (couponCode) {
+      const coupon = await db.coupon.findUnique({
+        where: { code: couponCode.trim().toUpperCase() }
+      });
+      if (coupon && coupon.isActive) {
+        price = Math.max(0, Math.floor(price * (1 - coupon.discountPct / 100)));
+        console.log(`[Razorpay Order] Applied coupon ${coupon.code} (${coupon.discountPct}% off). New price: ${price}`);
+      }
+    }
 
     const order = await razorpay.orders.create({
-      amount: planData.price,
+      amount: price,
       currency: planData.currency,
       receipt: `astra_${userId}_${Date.now()}`,
       notes: { userId, plan },

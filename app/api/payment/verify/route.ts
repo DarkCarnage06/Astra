@@ -1,13 +1,9 @@
-/**
- * app/api/payment/verify/route.ts
- * Verifies Razorpay payment signature and upgrades user plan.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import crypto from 'crypto';
 import { db } from '../../../../lib/db';
-import { type PlanKey } from '../../../../lib/razorpay';
+import { PLANS, type PlanKey } from '../../../../lib/razorpay';
+import type { Plan } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,12 +19,20 @@ export async function POST(request: NextRequest) {
     razorpay_payment_id,
     razorpay_signature,
     plan,
+    couponCode,
+    referralCode,
   } = body as {
     razorpay_order_id: string;
     razorpay_payment_id: string;
     razorpay_signature: string;
     plan: PlanKey;
+    couponCode?: string;
+    referralCode?: string;
   };
+
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return NextResponse.json({ error: 'Missing payment information' }, { status: 400 });
+  }
 
   // Verify signature
   const secret = process.env.RAZORPAY_KEY_SECRET ?? '';
@@ -38,6 +42,7 @@ export async function POST(request: NextRequest) {
     .digest('hex');
 
   if (expectedSignature !== razorpay_signature) {
+    console.error('[Razorpay Verify] Invalid signature.');
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
@@ -48,22 +53,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Determine final price (apply coupon if valid)
+    let discountPct = 0;
+    if (couponCode) {
+      const coupon = await db.coupon.findUnique({
+        where: { code: couponCode.trim().toUpperCase() }
+      });
+      if (coupon && coupon.isActive) {
+        discountPct = coupon.discountPct;
+      }
+    }
+
+    const planData = PLANS[plan];
+    const rawPrice = planData.price;
+    const finalAmount = Math.max(0, Math.floor(rawPrice * (1 - discountPct / 100)));
+
     // Update user plan
-    await db.user.update({
+    const updatedUser = await db.user.update({
       where: { id: user.id },
-      data: { plan: plan as 'FREE' | 'PRO' | 'PREMIUM' },
+      data: { plan: plan as Plan },
     });
 
-    // Create subscription record
+    // Create/update subscription record
     await db.subscription.upsert({
       where: { userId: user.id },
       update: {
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,
         razorpaySignature: razorpay_signature,
-        plan: plan as 'FREE' | 'PRO' | 'PREMIUM',
+        plan: plan as Plan,
         status: 'ACTIVE',
-        amount: 0,
+        amount: finalAmount,
         startDate: new Date(),
       },
       create: {
@@ -71,16 +91,54 @@ export async function POST(request: NextRequest) {
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,
         razorpaySignature: razorpay_signature,
-        plan: plan as 'FREE' | 'PRO' | 'PREMIUM',
+        plan: plan as Plan,
         status: 'ACTIVE',
-        amount: 0,
+        amount: finalAmount,
         currency: 'INR',
       },
     });
 
-    return NextResponse.json({ success: true, plan });
+    // Create Invoice record
+    await db.invoice.create({
+      data: {
+        userId: user.id,
+        amount: finalAmount,
+        currency: 'INR',
+        plan: plan as Plan,
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id,
+        status: 'PAID',
+      }
+    });
+
+    // Process referral registration if code was passed
+    if (referralCode) {
+      const uppercaseReferral = referralCode.trim().toUpperCase();
+      const allUsers = await db.user.findMany();
+      const referrer = allUsers.find(
+        (u) => `ASTRA-${u.id.slice(-6).toUpperCase()}` === uppercaseReferral
+      );
+
+      if (referrer && referrer.id !== user.id) {
+        const existingReferral = await db.referral.findUnique({
+          where: { referredId: user.id }
+        });
+        if (!existingReferral) {
+          await db.referral.create({
+            data: {
+              referrerId: referrer.id,
+              referredId: user.id,
+              code: uppercaseReferral
+            }
+          });
+        }
+      }
+    }
+
+    console.log(`[Razorpay Verify] Successfully verified and upgraded user ${user.id} to ${plan}`);
+    return NextResponse.json({ success: true, plan: updatedUser.plan });
   } catch (err) {
-    console.error('[Razorpay] Verification failed:', err);
-    return NextResponse.json({ error: 'Failed to process payment' }, { status: 500 });
+    console.error('[Razorpay Verify] Database update failed:', err);
+    return NextResponse.json({ error: 'Failed to process payment verification' }, { status: 500 });
   }
 }

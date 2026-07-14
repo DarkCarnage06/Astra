@@ -8,6 +8,7 @@ import { Star } from 'lucide-react';
 import { loadChartResponse } from '../../../lib/storage';
 import type { ChartResponse } from '../../../lib/types/chart';
 
+import PremiumLock from '../../../components/dashboard/premium-lock';
 // Lazy load YogasDashboard for performance optimization
 const YogasDashboard = dynamic(() => import('../../../components/dashboard/yogas'), {
   loading: () => (
@@ -34,7 +35,11 @@ export default function YogasPage() {
     return <EmptyState />;
   }
 
-  return <YogasDashboard chart={chart} />;
+  return (
+    <PremiumLock requiredPlan="PRO">
+      <YogasDashboard chart={chart} />
+    </PremiumLock>
+  );
 }
 
 function EmptyState() {
