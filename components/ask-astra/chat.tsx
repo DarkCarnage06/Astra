@@ -111,12 +111,14 @@ export function AskAstraChat() {
       console.log(`[Chat Query] Response body:`, text);
 
       if (!res.ok) {
-        let errMsg = `Failed to get response from Astra (status ${res.status}).`;
+        let errMsg = `Server error (HTTP ${res.status})`;
         try {
           const errData = JSON.parse(text);
-          if (errData.message) errMsg = errData.message;
-          else if (errData.error) errMsg = errData.error;
-        } catch {}
+          if (errData.message) errMsg = `[${res.status}] ${errData.message}`;
+          else if (errData.error) errMsg = `[${res.status}] ${errData.error}`;
+        } catch {
+          errMsg = `[${res.status}] ${text.slice(0, 200) || 'Unknown server error'}`;
+        }
         throw new Error(errMsg);
       }
 
@@ -129,8 +131,9 @@ export function AskAstraChat() {
       setMessages((prev) => [...prev, { role: 'assistant', content: data.content }]);
       console.log('[Frontend] Frontend rendered assistant message');
     } catch (err) {
-      console.error('[Frontend] Fetch failed or error thrown:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred.');
+      const errMsg = err instanceof Error ? err.message : 'An unknown error occurred.';
+      console.error('[Frontend] Error in handleSend:', errMsg, err);
+      setError(errMsg);
     } finally {
       setLoading(false);
     }
