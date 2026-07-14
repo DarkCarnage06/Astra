@@ -341,7 +341,7 @@ export function Dashboard() {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div className="mx-auto max-w-7xl px-6 pb-24 pt-32 lg:px-8">
+    <div className="mx-auto max-w-7xl px-6 pb-24 pt-8 lg:px-8">
 
       {/* ---- Header ---- */}
       <motion.div {...fadeUp(0)} className="mb-10 relative">
