@@ -134,7 +134,7 @@ export function SettingsPanel() {
               </div>
             </div>
             <Link
-              href="/birth-form"
+              href="/birth-form?mode=update"
               className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#B8BCC8] transition hover:border-white/20 hover:text-white"
             >
               <span>Update Birth Details</span>

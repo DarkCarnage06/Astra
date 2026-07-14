@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Background } from '../../components/background/background';
 import { BirthForm } from '../../components/birth-form/birth-form';
 import { Navbar } from '../../components/navbar/navbar';
@@ -12,7 +13,10 @@ export default function BirthFormPage() {
     <main className="min-h-screen overflow-x-hidden">
       <Background />
       <Navbar />
-      <BirthForm />
+      {/* Suspense required by Next.js when useSearchParams is used in a client component */}
+      <Suspense>
+        <BirthForm />
+      </Suspense>
     </main>
   );
 }
