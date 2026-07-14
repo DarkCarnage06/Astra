@@ -3,13 +3,15 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, AlertCircle, Bot, User, Trash2, ArrowRight } from 'lucide-react';
+import { Send, Sparkles, AlertCircle, Bot, User, Trash2, ArrowRight, Copy, Share2, RotateCcw } from 'lucide-react';
 import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
 import { toast } from '../../lib/toast';
+import { Markdown } from '../ui/markdown';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  timestamp?: string;
 }
 
 const SUGGESTIONS = [
@@ -48,7 +50,14 @@ export function AskAstraChat() {
 
         const data = JSON.parse(text);
         if (data.messages && data.messages.length > 0) {
-          setMessages(data.messages);
+          const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          setMessages(
+            data.messages.map((m: { role: 'user' | 'assistant'; content: string; timestamp?: string }) => ({
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp || timestamp,
+            }))
+          );
           setSessionId(data.sessionId);
         }
       } catch (err) {
@@ -70,7 +79,8 @@ export function AskAstraChat() {
     setError(null);
     const userMsg = textToSend.trim();
     setInput('');
-    setMessages((prev) => [...prev, { role: 'user', content: userMsg }]);
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setMessages((prev) => [...prev, { role: 'user', content: userMsg, timestamp }]);
     setLoading(true);
 
     try {
@@ -86,14 +96,7 @@ export function AskAstraChat() {
 
       const url = '/api/ask';
       console.log(`[Chat Query] Requesting: ${url}`);
-      console.log(`[Chat Query] Request Body:`, JSON.stringify({
-        message: userMsg,
-        history: messages,
-        birth,
-        chart,
-        sessionId,
-      }));
-
+      
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,7 +131,8 @@ export function AskAstraChat() {
         setSessionId(data.sessionId);
       }
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.content }]);
+      const assistantTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setMessages((prev) => [...prev, { role: 'assistant', content: data.content, timestamp: assistantTimestamp }]);
       console.log('[Frontend] Frontend rendered assistant message');
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -139,11 +143,42 @@ export function AskAstraChat() {
     }
   };
 
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Response copied to clipboard!');
+  };
+
+  const handleShare = async (text: string) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Astra AI Astrological Insight',
+          text: text.slice(0, 150) + '...',
+          url: window.location.href,
+        });
+      } catch {
+        // user cancelled or failed
+      }
+    } else {
+      navigator.clipboard.writeText(text);
+      toast.success('Insight text copied to clipboard for sharing!');
+    }
+  };
+
+  const handleRegenerate = async (index: number) => {
+    if (index > 0 && messages[index - 1].role === 'user') {
+      const userMsg = messages[index - 1].content;
+      // Slice history up to the user message, discarding the old AI reply
+      const truncatedHistory = messages.slice(0, index - 1);
+      setMessages(truncatedHistory);
+      await handleSend(userMsg);
+    }
+  };
+
   const handleClear = async () => {
     setMessages([]);
     setSessionId(null);
     setError(null);
-    // Let's create a new session next time they send a message
   };
 
   const birth = typeof window !== 'undefined' ? loadBirthDetails() : null;
@@ -232,8 +267,9 @@ export function AskAstraChat() {
             return (
               <motion.div
                 key={idx}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
                 className={`flex items-start gap-3.5 ${isUser ? 'justify-end' : ''}`}
               >
                 {!isUser && (
@@ -242,13 +278,53 @@ export function AskAstraChat() {
                   </div>
                 )}
                 <div
-                  className={`rounded-2xl px-4 py-3.5 text-sm leading-6 max-w-[80%] ${
+                  className={`rounded-2xl px-5 py-4 text-[15px] leading-7 tracking-wide max-w-[85%] ${
                     isUser
                       ? 'border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-white'
-                      : 'border border-white/10 bg-black/30 text-[#B8BCC8]'
+                      : 'border border-white/10 bg-black/40 text-[#B8BCC8]'
                   }`}
                 >
-                  {m.content}
+                  {isUser ? (
+                    <p className="whitespace-pre-wrap text-sm leading-6">{m.content}</p>
+                  ) : (
+                    <Markdown content={m.content} />
+                  )}
+
+                  {/* Actions & Timestamp row */}
+                  <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2 text-[10px] text-[#B8BCC8]/40">
+                    <span>{m.timestamp}</span>
+                    {!isUser && (
+                      <div className="flex items-center gap-3 ml-4">
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(m.content)}
+                          className="flex items-center gap-1 hover:text-[#D4AF37] transition duration-150"
+                          title="Copy response"
+                        >
+                          <Copy size={10} />
+                          Copy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleShare(m.content)}
+                          className="flex items-center gap-1 hover:text-[#D4AF37] transition duration-150"
+                          title="Share response"
+                        >
+                          <Share2 size={10} />
+                          Share
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRegenerate(idx)}
+                          className="flex items-center gap-1 hover:text-[#D4AF37] transition duration-150"
+                          title="Regenerate response"
+                        >
+                          <RotateCcw size={10} />
+                          Regenerate
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {isUser && (
                   <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-[#B8BCC8]">
