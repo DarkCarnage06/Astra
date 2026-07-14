@@ -204,7 +204,19 @@ export async function POST(request: NextRequest) {
       category,
     });
   } catch (err) {
-    console.error('[Backend] LLM request failed or other error in /api/ask:', err);
-    return NextResponse.json({ error: 'ai_failed', message: String(err) }, { status: 500 });
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error('[Backend] LLM request failed in /api/ask:');
+    console.error('  Message:', errMsg);
+    console.error('  Stack:', stack);
+    console.error('  Raw error:', err);
+    return NextResponse.json(
+      {
+        error: 'ai_failed',
+        message: errMsg,
+        ...(process.env.NODE_ENV !== 'production' && { stack }),
+      },
+      { status: 500 }
+    );
   }
 }

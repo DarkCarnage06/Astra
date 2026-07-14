@@ -52,8 +52,6 @@ export function verifyServerEnv() {
     'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
     'CLERK_SECRET_KEY',
     'OPENROUTER_API_KEY',
-    'NEXTAUTH_URL',
-    'NEXTAUTH_SECRET'
   ];
 
   required.forEach(key => {
