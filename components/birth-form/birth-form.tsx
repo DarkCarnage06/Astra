@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, ArrowRight, Calendar, Clock, MapPin, Sparkles, User } from 'lucide-react';
 import { FormEvent, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { GeocodeError, geocodePlace } from '../../lib/api/geocode';
 import { generateChart, ChartApiError } from '../../lib/api/chart';
@@ -88,13 +88,20 @@ const LOADING_STEPS = [
 // ---------------------------------------------------------------------------
 export function BirthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isUpdateMode = searchParams.get('mode') === 'update';
+
+  // Pre-fill with existing birth details when in update mode
+  const existingBirth = isUpdateMode
+    ? (typeof window !== 'undefined' ? loadBirthDetails() : null)
+    : null;
 
   const [form, setForm] = useState<FormState>({
-    name: '',
-    date: '',
-    time: '',
-    place: '',
-    knownTime: true,
+    name: existingBirth?.name ?? '',
+    date: existingBirth?.date ?? '',
+    time: existingBirth?.time ?? '',
+    place: existingBirth?.displayPlace ?? existingBirth?.place ?? '',
+    knownTime: existingBirth?.knownTime ?? true,
   });
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -103,8 +110,14 @@ export function BirthForm() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null);
 
-  // Restore existing birth details and chart from DB or localStorage on mount
+  // Restore existing birth details and chart from DB or localStorage on mount.
+  // Skip auto-redirect when the user arrived from Settings to update their details.
   useEffect(() => {
+    if (isUpdateMode) {
+      console.log('[BirthForm] Update mode — skipping auto-redirect.');
+      return;
+    }
+
     const restoreChart = async () => {
       try {
         console.log('[BirthForm] Checking DB for existing birth chart data...');
@@ -134,7 +147,7 @@ export function BirthForm() {
     } else {
       restoreChart();
     }
-  }, [router]);
+  }, [router, isUpdateMode]);
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -232,8 +245,13 @@ export function BirthForm() {
 
       advanceStep();
 
-      // 6. Navigate to dashboard
-      router.push('/dashboard');
+      // 6. Navigate: back to settings if updating, otherwise to the dashboard
+      if (isUpdateMode) {
+        toast.success('Birth details updated! Your chart has been recalculated.');
+        router.push('/dashboard/settings');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err) {
       console.error('[BirthForm] Submission error:', err);
       if (err instanceof GeocodeError) {
@@ -278,17 +296,30 @@ export function BirthForm() {
         >
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-[#B8BCC8] backdrop-blur-xl">
             <span className="h-2 w-2 rounded-full bg-[#D4AF37] shadow-[0_0_10px_rgba(212,175,55,0.8)]" />
-            Step 1 of 3 — Birth Details
+            {isUpdateMode ? 'Update Birth Details' : 'Step 1 of 3 — Birth Details'}
           </div>
           <h1 className="font-display text-4xl font-semibold tracking-[-0.03em] text-white sm:text-5xl">
-            Where did your
-            <br />
-            <span className="bg-gradient-to-r from-[#D4AF37] via-[#f0d060] to-[#D4AF37] bg-clip-text text-transparent">
-              story begin?
-            </span>
+            {isUpdateMode ? (
+              <>
+                Update your{' '}
+                <span className="bg-gradient-to-r from-[#D4AF37] via-[#f0d060] to-[#D4AF37] bg-clip-text text-transparent">
+                  birth details
+                </span>
+              </>
+            ) : (
+              <>
+                Where did your
+                <br />
+                <span className="bg-gradient-to-r from-[#D4AF37] via-[#f0d060] to-[#D4AF37] bg-clip-text text-transparent">
+                  story begin?
+                </span>
+              </>
+            )}
           </h1>
           <p className="mt-4 text-sm leading-7 text-[#B8BCC8]">
-            Your birth chart is calculated from the exact moment and place you arrived in this world.
+            {isUpdateMode
+              ? 'Edit your details below and we\'ll recalculate your birth chart.'
+              : 'Your birth chart is calculated from the exact moment and place you arrived in this world.'}
           </p>
         </motion.div>
 
@@ -425,7 +456,7 @@ export function BirthForm() {
                       exit={{ opacity: 0 }}
                       className="flex items-center gap-2"
                     >
-                      Generate My Birth Chart
+                      {isUpdateMode ? 'Update My Birth Chart' : 'Generate My Birth Chart'}
                       <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
                     </motion.span>
                   )}
