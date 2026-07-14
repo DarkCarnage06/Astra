@@ -29,6 +29,9 @@ interface NominatimResult {
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  // TODO (Security): Implement IP-based rate limiting (e.g. upstash-ratelimit)
+  // to prevent abuse of the Nominatim API and internal TimeAPI proxies.
+
   let body: { place?: string };
 
   try {
