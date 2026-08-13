@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   }
 
   const client = getOpenRouterClient();
-  const systemPrompt = `You are ASTRA, a wise Vedic astrology guide. Analyze the compatibility between two people based on their birth charts. Speak with warmth and depth. Never guarantee outcomes. Present astrology as interpretive guidance.`;
+  const systemPrompt = `You are ASTRA, a precise Vedic astrology guide. Analyze compatibility based on birth charts. You MUST mirror the user's English level (use simple language if they do, use high-quality language if they use high-quality language). Keep your analysis VERY concise, direct, and short. Never guarantee outcomes.`;
 
   const userPrompt = `Compare the compatibility of ${name1} and ${name2} based on their Vedic birth charts.
 
@@ -33,7 +33,7 @@ ${name2}'s chart:
 - Sun: ${chart2.sunSign}, Moon: ${chart2.moonSign}, Ascendant: ${chart2.ascendant.sign}
 - Mahadasha: ${chart2.dasha.mahadasha}
 
-Provide a nuanced reading covering strengths and growth areas. Format as JSON: {"title": "string", "description": "2-3 paragraph string"}. The description should cover: what makes this pairing special, potential challenges to navigate, and guidance for growth together.`;
+Provide a nuanced but VERY concise reading covering strengths and growth areas. Format as JSON: {"title": "string", "description": "1-2 very short paragraphs"}. The description must be precise and direct.`;
 
   try {
     const response = await client.complete({
