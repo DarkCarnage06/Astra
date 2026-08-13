@@ -70,11 +70,14 @@ const StatCard = memo(function StatCard({ label, value, sub, color }: { label: s
       whileHover={{ y: -4, scale: 1.01 }}
       transition={{ duration: 0.25 }}
       style={{ willChange: 'transform' }}
-      className="flex flex-col gap-1 rounded-[24px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl"
+      className="flex flex-col gap-1 rounded-[20px] border border-white/5 bg-surface p-6 shadow-premium-card relative overflow-hidden group"
     >
-      <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color }}>{label}</p>
-      <p className="font-display text-3xl font-semibold text-white">{value}</p>
-      <p className="text-xs text-[#B8BCC8]">{sub}</p>
+      <div className="absolute top-0 right-0 p-4 opacity-10 transition-opacity group-hover:opacity-20" style={{ color }}>
+        <Star size={64} className="blur-xl" />
+      </div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] relative z-10" style={{ color }}>{label}</p>
+      <p className="font-display text-3xl font-medium text-text mt-2 relative z-10">{value}</p>
+      <p className="text-xs text-secondary mt-1 relative z-10">{sub}</p>
     </motion.div>
   );
 });
@@ -92,26 +95,27 @@ const PlanetRow = memo(function PlanetRow({ planet, index }: { planet: PlanetInf
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.2 + index * 0.06, duration: 0.4 }}
       style={{ willChange: 'transform, opacity' }}
-      className="group flex items-center gap-4 rounded-2xl border border-white/0 px-4 py-3 transition hover:border-white/10 hover:bg-white/5"
+      className="group flex items-center gap-4 rounded-xl border border-white/0 px-3 py-3 transition hover:bg-surface-hover"
     >
       <div
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10"
-        style={{ background: `${color}18`, color }}
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/5"
+        style={{ background: `${color}10`, color }}
       >
-        <Icon size={15} />
+        <Icon size={14} />
       </div>
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-white">
+      <div className="flex w-32 flex-shrink-0 flex-col">
+        <p className="text-[13px] font-medium text-text">
           {planet.name}
           {planet.retrograde && (
-            <span className="ml-1.5 text-[10px] text-[#F59E0B] opacity-80">℞</span>
+            <span className="ml-1.5 text-[10px] text-gold opacity-80">℞</span>
           )}
         </p>
-        <p className="text-xs text-[#B8BCC8]">
-          {planet.sign} · {planet.degree.toFixed(2)}°
-        </p>
       </div>
-      <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold text-[#B8BCC8]">
+      <div className="flex flex-1 items-center gap-4 text-[13px] text-secondary">
+        <span className="w-16">{planet.sign}</span>
+        <span className="w-16 tabular-nums">{planet.degree.toFixed(2)}°</span>
+      </div>
+      <span className="rounded bg-surface px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-secondary border border-white/5">
         {ordinal(planet.house)} house
       </span>
     </motion.div>
@@ -127,27 +131,23 @@ const ReadingCard = memo(function ReadingCard({ reading, index, streaming }: { r
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.45 }}
-      whileHover={{ y: -3 }}
       style={{ willChange: 'transform, opacity' }}
-      className="group rounded-2xl border border-white/10 bg-black/20 p-5 transition hover:border-white/20"
+      className="group relative pb-6 mb-6 border-b border-white/5 last:border-0 last:mb-0 last:pb-0"
     >
-      <div className="mb-2.5 flex items-center gap-2.5">
-        <div
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 text-base"
-          style={{ background: `${reading.color}18` }}
-        >
+      <div className="mb-3 flex items-center gap-3">
+        <div className="text-xl opacity-80">
           {reading.emoji}
         </div>
-        <p className="text-sm font-semibold text-white">{reading.title}</p>
+        <h3 className="font-display text-sm font-semibold tracking-wide text-text uppercase">{reading.title}</h3>
         {streaming && (
           <motion.span
             animate={{ opacity: [1, 0.3, 1] }}
             transition={{ duration: 1.2, repeat: Infinity }}
-            className="ml-auto h-1.5 w-1.5 rounded-full bg-[#D4AF37]"
+            className="ml-auto h-1.5 w-1.5 rounded-full bg-gold"
           />
         )}
       </div>
-      <p className="text-sm leading-6 text-[#B8BCC8]">{reading.description}</p>
+      <p className="text-[14px] leading-relaxed text-secondary sm:pr-8">{reading.description}</p>
     </motion.div>
   );
 });
@@ -161,35 +161,35 @@ const ReadingCardSkeleton = memo(function ReadingCardSkeleton({ index }: { index
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: index * 0.08 }}
-      className="rounded-2xl border border-white/10 bg-black/20 p-5"
+      className="group relative pb-6 mb-6 border-b border-white/5 last:border-0 last:mb-0 last:pb-0"
     >
-      <div className="mb-3 flex items-center gap-2.5">
+      <div className="mb-3 flex items-center gap-3">
         <motion.div
-          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          animate={{ opacity: [0.1, 0.3, 0.1] }}
           transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.2 }}
-          className="h-8 w-8 rounded-xl bg-white/10"
+          className="h-6 w-6 rounded-full bg-white/20"
         />
         <motion.div
-          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          animate={{ opacity: [0.1, 0.3, 0.1] }}
           transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.2 + 0.1 }}
-          className="h-4 w-40 rounded-lg bg-white/10"
+          className="h-4 w-32 rounded bg-white/20"
         />
       </div>
       <div className="flex flex-col gap-2">
         <motion.div
-          animate={{ opacity: [0.2, 0.4, 0.2] }}
+          animate={{ opacity: [0.05, 0.15, 0.05] }}
           transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.2 + 0.2 }}
-          className="h-3 w-full rounded bg-white/8"
+          className="h-3 w-full rounded bg-white/20"
         />
         <motion.div
-          animate={{ opacity: [0.2, 0.4, 0.2] }}
+          animate={{ opacity: [0.05, 0.15, 0.05] }}
           transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.2 + 0.3 }}
-          className="h-3 w-4/5 rounded bg-white/8"
+          className="h-3 w-4/5 rounded bg-white/20"
         />
         <motion.div
-          animate={{ opacity: [0.2, 0.4, 0.2] }}
+          animate={{ opacity: [0.05, 0.15, 0.05] }}
           transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.2 + 0.4 }}
-          className="h-3 w-3/5 rounded bg-white/8"
+          className="h-3 w-3/5 rounded bg-white/20"
         />
       </div>
     </motion.div>
@@ -344,26 +344,34 @@ export function Dashboard() {
     <div className="mx-auto max-w-7xl px-6 pb-24 pt-8 lg:px-8">
 
       {/* ---- Header ---- */}
-      <motion.div {...fadeUp(0)} className="mb-10 relative">
-        <button
-          onClick={() => router.push('/birth-form')}
-          className="absolute right-0 top-0 inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
-        >
-          Start Over
-        </button>
-        <p className="mb-2 text-sm uppercase tracking-[0.28em] text-[#D4AF37]">Your Cosmic Blueprint</p>
-        <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">
-          {birth.name}
-        </h1>
-        <p className="mt-2 text-[#B8BCC8]">
-          Born {birth.date}
-          {birth.knownTime && birth.time ? ` · ${birth.time}` : ''}
-          {' · '}
-          {birth.displayPlace ?? birth.place}
-        </p>
-        <p className="mt-1 text-xs text-[#B8BCC8]/50">
-          {chart.ayanamsa} · Computed in {chart.metadata.calculationTimeMs?.toFixed(0) ?? '–'}ms
-        </p>
+      <motion.div {...fadeUp(0)} className="mb-8 relative rounded-[24px] border border-white/5 bg-surface p-8 shadow-premium-card overflow-hidden">
+        <div className="absolute inset-0 bg-premium-gradient opacity-50 pointer-events-none" />
+        <div className="relative z-10 flex flex-col items-start md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em] text-gold/80">Your Cosmic Blueprint</p>
+            <h1 className="font-display text-4xl font-medium tracking-tight text-text sm:text-5xl">
+              {birth.name}
+            </h1>
+            <p className="mt-4 text-[13px] text-secondary flex items-center gap-2">
+              <span>Born {birth.date}</span>
+              {birth.knownTime && birth.time ? <span className="text-secondary/30">•</span> : ''}
+              {birth.knownTime && birth.time ? <span>{birth.time}</span> : ''}
+              <span className="text-secondary/30">•</span>
+              <span>{birth.displayPlace ?? birth.place}</span>
+            </p>
+          </div>
+          <div className="flex flex-col items-start md:items-end gap-4">
+            <button
+              onClick={() => router.push('/birth-form')}
+              className="inline-flex items-center justify-center rounded-full border border-white/5 bg-white/5 px-5 py-2 text-xs font-medium text-text transition hover:bg-white/10"
+            >
+              Start Over
+            </button>
+            <p className="text-[10px] text-secondary/50 font-medium tracking-wide uppercase">
+              {chart.ayanamsa} · {chart.metadata.calculationTimeMs?.toFixed(0) ?? '–'}ms
+            </p>
+          </div>
+        </div>
       </motion.div>
 
       {/* ---- Stat row ---- */}
@@ -378,12 +386,12 @@ export function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
 
         {/* Left — Planetary positions */}
-        <motion.section {...fadeUp(0.15)} className="rounded-[32px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-xl">
-          <p className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
-            <span className="mr-2 opacity-60"><Compass size={11} className="inline" /></span>
+        <motion.section {...fadeUp(0.15)} className="rounded-[24px] border border-white/5 bg-surface p-8 shadow-premium-card">
+          <p className="mb-6 text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/80 flex items-center gap-2">
+            <Compass size={12} className="opacity-70" />
             Planetary Positions
           </p>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
             {chart.planets.map((planet, i) => (
               <PlanetRow key={planet.name} planet={planet} index={i} />
             ))}
@@ -394,17 +402,17 @@ export function Dashboard() {
         <div className="flex flex-col gap-6">
 
           {/* AI Readings */}
-          <motion.section {...fadeUp(0.2)} className="rounded-[32px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-xl">
-            <div className="mb-6 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
-                <span className="mr-2 opacity-60"><Sparkles size={11} className="inline" /></span>
+          <motion.section {...fadeUp(0.2)} className="rounded-[24px] border border-white/5 bg-surface p-8 shadow-premium-card">
+            <div className="mb-8 flex items-center justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/80 flex items-center gap-2">
+                <Sparkles size={12} className="opacity-70" />
                 AI Readings
               </p>
               {readingsLoading && (
                 <motion.span
                   animate={{ opacity: [1, 0.4, 1] }}
                   transition={{ duration: 1.4, repeat: Infinity }}
-                  className="text-xs text-[#B8BCC8]/60"
+                  className="text-[11px] font-medium tracking-wide text-secondary/60 uppercase"
                 >
                   {streamingTheme ? `Generating ${streamingTheme}…` : 'Loading…'}
                 </motion.span>
@@ -412,14 +420,14 @@ export function Dashboard() {
               {readingsError && !readingsLoading && (
                 <button
                   onClick={() => birth && chart && fetchReadings(birth, chart)}
-                  className="flex items-center gap-1.5 text-xs text-[#D4AF37] hover:text-white transition"
+                  className="flex items-center gap-1.5 text-xs font-medium text-gold hover:text-text transition"
                 >
                   <RefreshCw size={11} /> Retry
                 </button>
               )}
             </div>
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col">
               {/* Show readings as they arrive */}
               {readings.map((reading, i) => (
                 <ReadingCard
@@ -437,7 +445,7 @@ export function Dashboard() {
 
               {/* Error state */}
               {readingsError && readings.length === 0 && (
-                <div className="flex items-start gap-2.5 rounded-2xl border border-red-400/20 bg-red-400/8 p-4 text-sm text-red-400">
+                <div className="flex items-start gap-2.5 rounded-xl border border-red-400/20 bg-red-400/5 p-4 text-[13px] text-red-400">
                   <AlertCircle size={15} className="mt-0.5 flex-shrink-0" />
                   <span>{readingsError}</span>
                 </div>
@@ -446,13 +454,13 @@ export function Dashboard() {
           </motion.section>
 
           {/* Dasha Timeline */}
-          <motion.section {...fadeUp(0.25)} className="rounded-[32px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-xl">
-            <p className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
-              <span className="mr-2 opacity-60"><Clock size={11} className="inline" /></span>
+          <motion.section {...fadeUp(0.25)} className="rounded-[24px] border border-white/5 bg-surface p-8 shadow-premium-card">
+            <p className="mb-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/80 flex items-center gap-2">
+              <Clock size={12} className="opacity-70" />
               Vimshottari Dasha
             </p>
-            <div className="relative flex flex-col gap-0">
-              <div className="absolute bottom-4 left-[19px] top-4 w-px bg-white/10" />
+            <div className="relative flex flex-col gap-0 pl-2">
+              <div className="absolute bottom-4 left-[27px] top-4 w-[1px] bg-white/5" />
               {[
                 {
                   title: `${chart.dasha.mahadasha} Mahadasha`,
@@ -463,32 +471,30 @@ export function Dashboard() {
                   active: true,
                 },
               ].map((phase) => (
-                <div key={phase.title} className="relative flex items-start gap-5 pb-6 last:pb-0">
+                <div key={phase.title} className="relative flex items-start gap-6 pb-6 last:pb-0">
                   <div
-                    className="relative z-10 mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border"
-                    style={{
-                      borderColor: phase.active ? phase.color : 'rgba(255,255,255,0.1)',
-                      background: phase.active ? `${phase.color}18` : 'rgba(255,255,255,0.04)',
-                      boxShadow: phase.active ? `0 0 20px ${phase.color}40` : 'none',
-                    }}
+                    className="relative z-10 mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-white/5 bg-surface"
                   >
                     <div
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ background: phase.active ? phase.color : 'rgba(255,255,255,0.25)' }}
+                      className="h-3 w-3 rounded-full"
+                      style={{ background: phase.active ? phase.color : 'rgba(255,255,255,0.2)' }}
                     />
+                    {phase.active && (
+                       <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: phase.color }} />
+                    )}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <p className="text-sm font-semibold text-white">{phase.title}</p>
+                      <p className="text-[15px] font-semibold text-text">{phase.title}</p>
                       {phase.active && (
-                        <span className="rounded-full border border-[#34D399]/30 bg-[#34D399]/10 px-2 py-0.5 text-[10px] font-semibold text-[#34D399]">
+                        <span className="rounded bg-[#34D399]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#34D399] border border-[#34D399]/20">
                           Now
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-[#D4AF37]">{phase.sub}</p>
-                    <p className="text-xs text-[#B8BCC8]/60">{phase.period}</p>
-                    <p className="mt-1 text-xs leading-5 text-[#B8BCC8]">{phase.body}</p>
+                    <p className="text-[13px] text-gold/90 mt-1">{phase.sub}</p>
+                    <p className="text-[11px] text-secondary/60 uppercase tracking-widest mt-1 mb-2">{phase.period}</p>
+                    <p className="text-[13px] leading-relaxed text-secondary">{phase.body}</p>
                   </div>
                 </div>
               ))}

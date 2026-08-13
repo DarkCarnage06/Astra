@@ -245,11 +245,7 @@ function EmptyState() {
       </div>
       <a
         href="/dashboard"
-        className="px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, #D4AF37, #f0d060)',
-          color: '#05060A',
-        }}
+        className="px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 bg-gold text-black shadow-goldGlow hover:scale-105 hover:bg-gold-muted"
       >
         Go to Dashboard
       </a>
@@ -311,18 +307,18 @@ function TimelineCard({ period, index, onClick, isSelected }: TimelineCardProps)
 
       {/* Card */}
       <div
-        className="ml-2 rounded-[20px] p-4 transition-all duration-300 group-hover:scale-[1.02]"
+        className="ml-2 rounded-[20px] p-4 transition-all duration-300 group-hover:scale-[1.02] shadow-premium-card"
         style={{
           background: period.isCurrent
-            ? `linear-gradient(135deg, rgba(212,175,55,0.10), rgba(212,175,55,0.04))`
+            ? `linear-gradient(135deg, rgba(212,175,55,0.10), transparent)`
             : isSelected && !period.isCurrent
             ? 'rgba(255,255,255,0.07)'
-            : 'rgba(255,255,255,0.03)',
+            : 'var(--surface)',
           border: period.isCurrent
             ? `1px solid ${color}44`
             : isSelected
             ? '1px solid rgba(255,255,255,0.14)'
-            : '1px solid rgba(255,255,255,0.07)',
+            : '1px solid rgba(255,255,255,0.05)',
           opacity: period.isPast ? 0.6 : 1,
         }}
       >
@@ -447,13 +443,14 @@ function DetailPanel({ currentPeriod, antardashas }: DetailPanelProps) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="rounded-[24px] p-6"
+        className="rounded-[24px] p-6 shadow-premium-card relative overflow-hidden"
         style={{
-          background: `linear-gradient(135deg, ${color}15, ${color}06, rgba(255,255,255,0.02))`,
+          background: `linear-gradient(135deg, ${color}15, transparent)`,
           border: `1px solid ${color}30`,
           backdropFilter: 'blur(24px)',
         }}
       >
+        <div className="absolute top-0 right-0 h-32 w-32 rounded-full blur-2xl pointer-events-none" style={{ background: `${color}15` }} />
         {/* Planet icon + name */}
         <div className="flex items-center gap-4 mb-5">
           <div

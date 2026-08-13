@@ -5,6 +5,7 @@ import { Crown, Zap, Star, Check, Sparkles, Gift, Share2, FileText, Percent, Dow
 import { useState, useEffect } from 'react';
 import { PLANS, type PlanKey } from '../../lib/razorpay';
 import { toast } from '../../lib/toast';
+import { PAYMENTS_ENABLED } from '../../config/payments';
 
 declare global {
   interface Window {
@@ -159,6 +160,7 @@ export function BillingPlans({ currentPlan = 'FREE' }: { currentPlan?: string })
   };
 
   const handleUpgrade = async (planKey: PlanKey) => {
+    if (!PAYMENTS_ENABLED) return;
     if (planKey === 'FREE' || !razorpayLoaded) return;
 
     setLoading(planKey);
@@ -335,6 +337,15 @@ export function BillingPlans({ currentPlan = 'FREE' }: { currentPlan?: string })
       {/* Pricing Cards Grid */}
       <div>
         <h2 className="mb-6 font-display text-2xl font-bold text-white">Available Plans</h2>
+        
+        {!PAYMENTS_ENABLED && (
+          <div className="mb-8 rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-5 text-[#D4AF37]">
+            <p className="text-sm font-medium leading-relaxed">
+              Premium memberships are coming soon. During our early launch, every feature is available free for all users.
+            </p>
+          </div>
+        )}
+
         <div className="grid gap-5 sm:grid-cols-3">
           {planKeys.map((planKey, i) => {
             const plan = PLANS[planKey];
@@ -413,26 +424,48 @@ export function BillingPlans({ currentPlan = 'FREE' }: { currentPlan?: string })
                 </ul>
 
                 {/* CTA */}
-                <button
-                  onClick={() => handleUpgrade(planKey)}
-                  disabled={isCurrent || loading === planKey || plan.price === 0}
-                  className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition ${
-                    isCurrent
-                      ? 'cursor-not-allowed border border-white/10 bg-white/5 text-[#B8BCC8]'
-                      : plan.price === 0
-                      ? 'cursor-default border border-white/10 bg-white/5 text-[#B8BCC8]'
-                      : isPro
-                      ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90'
-                      : 'border border-white/20 bg-white/10 text-white hover:bg-white/15'
-                  }`}
-                >
-                  {loading === planKey ? (
-                    <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                      <Sparkles size={14} />
-                    </motion.span>
-                  ) : null}
-                  {isCurrent ? 'Current Plan' : plan.price === 0 ? 'Get Started Free' : `Upgrade to ${plan.name}`}
-                </button>
+                {!PAYMENTS_ENABLED ? (
+                  planKey === 'FREE' ? (
+                    <button
+                      disabled={true}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold cursor-not-allowed border border-white/10 bg-white/5 text-[#B8BCC8]"
+                    >
+                      ✓ Current Plan
+                    </button>
+                  ) : (
+                    <button
+                      disabled={true}
+                      title="Premium plans are launching soon."
+                      className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border border-[#D4AF37]/20 bg-[#D4AF37]/5 text-[#D4AF37] cursor-not-allowed"
+                    >
+                      Coming Soon
+                      <span className="rounded bg-[#D4AF37]/20 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#D4AF37]">
+                        Premium
+                      </span>
+                    </button>
+                  )
+                ) : (
+                  <button
+                    onClick={() => handleUpgrade(planKey)}
+                    disabled={isCurrent || loading === planKey || plan.price === 0}
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition ${
+                      isCurrent
+                        ? 'cursor-not-allowed border border-white/10 bg-white/5 text-[#B8BCC8]'
+                        : plan.price === 0
+                        ? 'cursor-default border border-white/10 bg-white/5 text-[#B8BCC8]'
+                        : isPro
+                        ? 'bg-[#D4AF37] text-black hover:bg-[#D4AF37]/90'
+                        : 'border border-white/20 bg-white/10 text-white hover:bg-white/15'
+                    }`}
+                  >
+                    {loading === planKey ? (
+                      <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                        <Sparkles size={14} />
+                      </motion.span>
+                    ) : null}
+                    {isCurrent ? 'Current Plan' : plan.price === 0 ? 'Get Started Free' : `Upgrade to ${plan.name}`}
+                  </button>
+                )}
               </motion.div>
             );
           })}
@@ -440,7 +473,7 @@ export function BillingPlans({ currentPlan = 'FREE' }: { currentPlan?: string })
       </div>
 
       {/* Promos, Coupons & Referrals Section */}
-      {currentPlan === 'FREE' && (
+      {PAYMENTS_ENABLED && currentPlan === 'FREE' && (
         <div className="grid gap-6 md:grid-cols-2">
           {/* Coupon Entry */}
           <motion.div {...fadeUp(0.2)} className="rounded-[24px] border border-white/10 bg-white/[0.02] p-6">

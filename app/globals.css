@@ -2,33 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-}
+@layer base {
+  :root {
+    color-scheme: dark;
+    --color-background: 5 6 10;
+    --color-surface: 10 12 20;
+    --color-surface-hover: 17 20 31;
+    --color-border: 255 255 255;
+    
+    --color-text-primary: 243 244 246; /* Off-white */
+    --color-text-secondary: 156 163 175; /* Muted gray */
+    
+    --color-gold: 212 175 55;
+    --color-gold-muted: 178 145 45;
+  }
 
-html {
-  scroll-behavior: smooth;
-}
+  html {
+    scroll-behavior: smooth;
+  }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: #05060A;
-  color: #FFFFFF;
-  font-family: var(--font-inter, 'Inter', sans-serif);
-}
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: rgb(var(--color-background));
+    color: rgb(var(--color-text-primary));
+    font-family: var(--font-inter), 'Inter', sans-serif;
+  }
 
-::selection {
-  background: rgba(212, 175, 55, 0.35);
-  color: white;
+  ::selection {
+    background: rgba(var(--color-gold), 0.35);
+    color: white;
+  }
 }
 
 @layer utilities {
   .text-shadow-glow {
-    text-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+    text-shadow: 0 0 30px rgba(56, 189, 248, 0.15);
+  }
+
+  .text-shadow-gold {
+    text-shadow: 0 0 30px rgba(var(--color-gold), 0.2);
   }
 
   .font-display {
-    font-family: var(--font-space-grotesk, 'Space Grotesk', sans-serif);
+    font-family: var(--font-space-grotesk), 'Space Grotesk', sans-serif;
   }
 }

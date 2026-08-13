@@ -27,9 +27,9 @@ export function FeaturesSection() {
               viewport={{ once: true, amount: 0.3 }}
               whileHover={{ y: -6, scale: 1.01, rotateX: 2, rotateY: -2 }}
               transition={{ duration: 0.45, delay: index * 0.06 }}
-              className="group rounded-[28px] border border-white/10 bg-white/5 p-8 shadow-[0_0_40px_rgba(255,255,255,0.03)] backdrop-blur-2xl"
+              className="group rounded-[28px] border border-white/5 bg-surface p-8 shadow-premium-card backdrop-blur-2xl transition hover:border-gold/30 hover:bg-surface-hover"
             >
-              <div className="mb-6 inline-flex rounded-2xl border border-white/10 bg-white/10 p-3 text-[#D4AF37]">
+              <div className="mb-6 inline-flex rounded-[16px] border border-gold/20 bg-gold/10 p-3 text-gold">
                 <Icon size={20} />
               </div>
               <h3 className="mb-3 text-xl font-semibold text-white">{feature.title}</h3>

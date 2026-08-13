@@ -11,6 +11,7 @@ import { buildChartContext } from '../../../prompts/system';
 import { db } from '../../../lib/db';
 import { MODEL_SETTINGS } from '../../../config/models';
 import { PROMPT_TEMPLATES } from './prompts';
+import { PAYMENTS_ENABLED } from '../../../config/payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
       select: { id: true, plan: true }
     });
 
-    if (user && user.plan === 'FREE') {
+    if (PAYMENTS_ENABLED && user && user.plan === 'FREE') {
       const userMessageCount = await db.chatMessage.count({
         where: {
           session: {

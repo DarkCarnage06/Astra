@@ -4,11 +4,19 @@ import Razorpay from 'razorpay';
 import { PLANS, type PlanKey } from '../../../../lib/razorpay';
 import { db } from '../../../../lib/db';
 import crypto from 'crypto';
+import { PAYMENTS_ENABLED } from '../../../../config/payments';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   console.log('========== START CREATE ORDER ==========');
+
+  if (!PAYMENTS_ENABLED) {
+    return NextResponse.json(
+      { error: 'payments_disabled', message: 'Payments are temporarily disabled. Premium features are free!' },
+      { status: 403 }
+    );
+  }
 
   // Verify environment variables (STEP 3)
   const envVars = {

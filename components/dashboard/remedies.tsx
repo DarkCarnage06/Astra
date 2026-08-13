@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Gem, Flame, AlertCircle } from 'lucide-react';
+import { Gem, Flame, AlertCircle, Volume2 } from 'lucide-react';
 import { generateRemedies } from '../../lib/astrology/remedyEngine';
 import type { ChartResponse } from '../../lib/types/chart';
 import { THEME } from '../../config/theme';
@@ -26,11 +26,11 @@ export default function RemediesDashboard({ chart }: RemediesDashboardProps) {
         transition={{ duration: 0.5 }}
         className="mb-8"
       >
-        <p className="text-sm uppercase tracking-[0.28em] text-[#D4AF37] mb-2">Cosmic Alignment &amp; Relief</p>
-        <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-gold mb-3">Cosmic Alignment &amp; Relief</p>
+        <h1 className="font-display text-4xl font-medium tracking-tight text-text sm:text-5xl">
           Traditional Remedies
         </h1>
-        <p className="mt-2 text-[#B8BCC8]">
+        <p className="mt-4 text-[14px] text-secondary leading-relaxed max-w-2xl">
           Personalized recommendations, mantras, and gemstones calculated from your planetary positions to strengthen weak chart sectors and bring life balance.
         </p>
       </motion.div>
@@ -52,7 +52,7 @@ export default function RemediesDashboard({ chart }: RemediesDashboardProps) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.08, duration: 0.45 }}
                   key={rem.planet}
-                  className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl hover:border-white/20 transition-all duration-300"
+                  className="rounded-[24px] border border-white/5 bg-surface p-7 shadow-premium-card hover:border-white/10 transition-all duration-300"
                 >
                   {/* Planet Header */}
                   <div className="mb-4 flex items-center justify-between">
@@ -68,10 +68,29 @@ export default function RemediesDashboard({ chart }: RemediesDashboardProps) {
                   </div>
 
                   {/* Mantra */}
-                  <div className="mb-5 rounded-2xl bg-black/20 p-4 border border-white/5">
-                    <p className="text-xs text-[#D4AF37] uppercase tracking-[0.1em] font-semibold mb-1">Mantra</p>
-                    <p className="text-lg font-semibold text-white mb-0.5 tracking-wide">{rem.mantra}</p>
-                    <p className="text-xs italic text-[#B8BCC8]">{rem.transliteration}</p>
+                  <div className="mb-6 rounded-[16px] bg-surface-hover p-5 border border-white/5 relative overflow-hidden group/mantra">
+                    <div className="absolute top-0 right-0 h-32 w-32 bg-white/5 blur-2xl rounded-full pointer-events-none" />
+                    <div className="flex items-start justify-between relative z-10">
+                      <div>
+                        <p className="text-[10px] text-gold uppercase tracking-[0.2em] font-semibold mb-2">Mantra</p>
+                        <p className="text-[17px] font-medium text-text mb-1 tracking-wide">{rem.mantra}</p>
+                        <p className="text-[11px] italic text-secondary">{rem.transliteration}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          window.speechSynthesis.cancel();
+                          const utterance = new SpeechSynthesisUtterance(rem.transliteration);
+                          utterance.lang = 'hi-IN';
+                          utterance.rate = 0.85;
+                          window.speechSynthesis.speak(utterance);
+                        }}
+                        className="rounded-full bg-gold/10 p-2 text-gold transition hover:bg-gold hover:text-black opacity-0 group-hover/mantra:opacity-100"
+                        title="Listen to Mantra"
+                        aria-label="Listen to Mantra"
+                      >
+                        <Volume2 size={16} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Details Grid */}
@@ -137,40 +156,40 @@ export default function RemediesDashboard({ chart }: RemediesDashboardProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1, duration: 0.4 }}
                 key={gem.gem}
-                className="rounded-3xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#D4AF37]/5 to-transparent p-6 backdrop-blur-xl hover:border-[#D4AF37]/40 transition-all duration-300 relative overflow-hidden"
+                className="rounded-[24px] border border-gold/20 bg-gradient-to-br from-gold/5 to-transparent p-7 shadow-premium-card hover:border-gold/40 transition-all duration-300 relative overflow-hidden"
               >
                 {/* Glow badge */}
-                <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#D4AF37]/10 blur-xl" />
+                <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-gold/10 blur-2xl pointer-events-none" />
 
                 {/* Title */}
-                <div className="mb-4 flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4AF37]/15 text-[#D4AF37]">
-                    <Gem size={16} />
+                <div className="mb-5 flex items-center gap-3 relative z-10">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 text-gold border border-gold/20">
+                    <Gem size={18} />
                   </div>
                   <div>
-                    <h3 className="font-display text-base font-semibold text-white">{gem.gem}</h3>
-                    <p className="text-[10px] uppercase tracking-wider text-[#D4AF37] font-semibold">For Planet: {gem.planet}</p>
+                    <h3 className="font-display text-lg font-medium text-text">{gem.gem}</h3>
+                    <p className="text-[10px] uppercase tracking-widest text-gold font-semibold">For Planet: {gem.planet}</p>
                   </div>
                 </div>
 
                 {/* Reasoning */}
-                <p className="text-xs leading-5 text-[#B8BCC8] mb-4">
+                <p className="text-[13px] leading-relaxed text-secondary mb-6 relative z-10">
                   {gem.reasoning}
                 </p>
 
                 {/* Practical wearing directions */}
-                <div className="rounded-2xl bg-black/30 p-4 border border-white/5 text-xs space-y-2">
+                <div className="rounded-[16px] bg-surface-hover p-5 border border-white/5 text-[12px] space-y-3 relative z-10">
                   <div className="flex justify-between">
-                    <span className="text-[#B8BCC8]">Suggested Metal:</span>
-                    <span className="text-white font-semibold">{gem.metal}</span>
+                    <span className="text-secondary">Suggested Metal:</span>
+                    <span className="text-text font-semibold">{gem.metal}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#B8BCC8]">Wearing Finger:</span>
-                    <span className="text-white font-semibold">{gem.finger}</span>
+                    <span className="text-secondary">Wearing Finger:</span>
+                    <span className="text-text font-semibold">{gem.finger}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#B8BCC8]">Auspicious Day:</span>
-                    <span className="text-[#D4AF37] font-semibold">{gem.day}</span>
+                    <span className="text-secondary">Auspicious Day:</span>
+                    <span className="text-gold font-semibold">{gem.day}</span>
                   </div>
                 </div>
               </motion.div>

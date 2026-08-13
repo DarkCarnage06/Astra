@@ -215,11 +215,11 @@ export function AskAstraChat() {
   if (!birth) {
     return (
       <div className="flex h-[70vh] flex-col items-center justify-center text-center">
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">
-          <Sparkles size={24} />
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/10 text-gold border border-gold/20 shadow-glow">
+          <Sparkles size={28} />
         </div>
-        <h3 className="font-display text-xl font-semibold text-white">Generate Your Chart First</h3>
-        <p className="mt-2 max-w-sm text-sm text-[#B8BCC8]">
+        <h3 className="font-display text-2xl font-medium text-text">Generate Your Chart First</h3>
+        <p className="mt-3 max-w-sm text-sm text-secondary leading-relaxed">
           To ask Astra personalized questions about your life, you need to calculate your sidereal birth chart first.
         </p>
         <Link
@@ -234,22 +234,23 @@ export function AskAstraChat() {
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-12rem)] max-w-4xl flex-col rounded-[24px] border border-white/10 bg-white/[0.03] backdrop-blur-xl">
+    <div className="mx-auto flex h-[calc(100vh-12rem)] max-w-4xl flex-col rounded-[24px] border border-white/5 bg-surface shadow-premium-card relative overflow-hidden">
+      <div className="absolute inset-0 bg-premium-gradient opacity-30 pointer-events-none" />
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#D4AF37]/15 text-[#D4AF37]">
-            <Sparkles size={16} />
+      <div className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-5">
+        <div className="flex items-center gap-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 text-gold border border-gold/20 shadow-[0_0_15px_rgba(212,175,55,0.15)]">
+            <Sparkles size={18} />
           </div>
           <div>
-            <h1 className="font-display text-sm font-bold text-white uppercase tracking-wider">Ask Astra AI</h1>
-            <p className="text-[10px] text-[#B8BCC8]">Personalized cosmic dialog with your birth chart context</p>
+            <h1 className="font-display text-sm font-semibold text-text uppercase tracking-widest">Ask Astra AI</h1>
+            <p className="text-[11px] text-secondary mt-0.5">Personalized cosmic dialog with your chart context</p>
           </div>
         </div>
         {messages.length > 0 && (
           <button
             onClick={handleClear}
-            className="flex items-center gap-1.5 text-xs text-[#B8BCC8]/60 transition hover:text-red-400"
+            className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase text-secondary/60 transition hover:text-red-400"
             title="Reset conversation"
           >
             <Trash2 size={13} />
@@ -268,10 +269,12 @@ export function AskAstraChat() {
               exit={{ opacity: 0 }}
               className="flex h-full flex-col justify-center space-y-8"
             >
-              <div className="text-center max-w-md mx-auto space-y-3">
-                <p className="text-xs uppercase tracking-[0.25em] text-[#D4AF37]">Cosmic Oracle</p>
-                <h2 className="font-display text-2xl font-semibold text-white">How can Astra guide you today?</h2>
-                <p className="text-xs text-[#B8BCC8]">
+              <div className="text-center max-w-md mx-auto space-y-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-gold/80 flex items-center justify-center gap-2">
+                  <Sparkles size={12} className="opacity-60" /> Cosmic Oracle
+                </p>
+                <h2 className="font-display text-3xl font-medium text-text tracking-tight">How can Astra guide you today?</h2>
+                <p className="text-[14px] text-secondary leading-relaxed">
                   Ask about career, love, relationships, life chapters or health. Your birth chart data is automatically enriched with every prompt.
                 </p>
               </div>
@@ -282,9 +285,10 @@ export function AskAstraChat() {
                   <button
                     key={idx}
                     onClick={() => handleSend(s.text)}
-                    className="group rounded-2xl border border-white/10 bg-white/5 p-4 text-left text-xs text-[#B8BCC8] transition hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/5 hover:text-white"
+                    className="group flex flex-col items-start rounded-[16px] border border-white/5 bg-surface-hover p-5 text-left transition hover:border-gold/30 hover:bg-gold/5"
                   >
-                    {s.text}
+                    <span className="text-[10px] uppercase tracking-wider text-gold/70 mb-2">{s.category}</span>
+                    <span className="text-[13px] text-secondary group-hover:text-text transition-colors leading-snug">{s.text}</span>
                   </button>
                 ))}
               </div>
@@ -299,24 +303,26 @@ export function AskAstraChat() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className={`flex items-start gap-3.5 ${isUser ? 'justify-end' : ''}`}
+                className={`flex items-start gap-4 ${isUser ? 'justify-end' : ''}`}
               >
                 {!isUser && (
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37]">
-                    <Bot size={15} />
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-gold/10 bg-gold/5 text-gold">
+                    <Bot size={16} />
                   </div>
                 )}
                 <div
-                  className={`rounded-2xl px-5 py-4 text-[15px] leading-7 tracking-wide max-w-[85%] ${
+                  className={`rounded-[20px] px-6 py-5 text-[15px] leading-relaxed max-w-[85%] ${
                     isUser
-                      ? 'border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-white'
-                      : 'border border-white/10 bg-black/40 text-[#B8BCC8]'
+                      ? 'border border-white/5 bg-surface-hover text-text rounded-tr-sm'
+                      : 'border-none bg-transparent text-secondary'
                   }`}
                 >
                   {isUser ? (
-                    <p className="whitespace-pre-wrap text-sm leading-6">{m.content}</p>
+                    <p className="whitespace-pre-wrap text-[14px]">{m.content}</p>
                   ) : (
-                    <Markdown content={m.content} />
+                    <div className="text-[15px] prose-a:text-gold prose-strong:text-text text-secondary max-w-none">
+                      <Markdown content={m.content} />
+                    </div>
                   )}
 
                   {/* Actions & Timestamp row */}
@@ -410,21 +416,23 @@ export function AskAstraChat() {
           e.preventDefault();
           handleSend(input);
         }}
-        className="flex items-center gap-2 border-t border-white/10 p-4"
+        className="relative z-10 flex items-center gap-3 border-t border-white/5 bg-background/50 p-4 backdrop-blur-xl"
       >
-        <input
-          value={input}
-          disabled={isLocked || loading}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={isLocked ? "Chat locked. Please upgrade to continue." : "Ask Astra about your chart..."}
-          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white placeholder-[#B8BCC8]/50 outline-none transition focus:border-[#D4AF37]/40 focus:ring-1 focus:ring-[#D4AF37]/20 disabled:opacity-50"
-        />
+        <div className="relative flex-1 group">
+          <input
+            value={input}
+            disabled={isLocked || loading}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={isLocked ? "Chat locked. Please upgrade to continue." : "Ask Astra about your chart..."}
+            className="w-full rounded-[16px] border border-white/10 bg-surface px-5 py-4 text-[14px] text-text placeholder-secondary/50 outline-none transition-all focus:border-gold/30 focus:bg-surface-hover focus:shadow-[0_0_20px_rgba(212,175,55,0.05)] disabled:opacity-50"
+          />
+        </div>
         <button
           type="submit"
           disabled={!input.trim() || loading || isLocked}
-          className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#D4AF37] text-black transition hover:bg-[#D4AF37]/90 disabled:opacity-50"
+          className="flex h-[54px] w-[54px] flex-shrink-0 items-center justify-center rounded-[16px] bg-gold text-black shadow-goldGlow transition-all hover:bg-gold-muted hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:shadow-none disabled:hover:scale-100"
         >
-          <Send size={15} />
+          <Send size={18} />
         </button>
       </form>
     </div>

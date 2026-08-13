@@ -44,10 +44,16 @@ export async function getOrCreateUser() {
   return user;
 }
 
+import { PAYMENTS_ENABLED } from '../config/payments';
+
 /**
  * Get the current user's subscription plan.
  */
 export async function getUserPlan(): Promise<'FREE' | 'PRO' | 'PREMIUM'> {
+  if (!PAYMENTS_ENABLED) {
+    return 'PREMIUM';
+  }
+
   const { userId } = await auth();
   if (!userId) return 'FREE';
 

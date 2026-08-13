@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
 
-export const dynamic = 'force-dynamic';
+import { PAYMENTS_ENABLED } from '../../../../config/payments';
 
 export async function GET(request: NextRequest) {
   let clerkId: string | null = null;
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      plan: user.plan,
+      plan: PAYMENTS_ENABLED ? user.plan : 'PREMIUM',
       subscription: user.subscription,
       invoices: user.invoices,
       referralCode,

@@ -77,7 +77,7 @@ function PlanetCard({ planet, index, onClick }: PlanetCardProps) {
       transition={{ duration: 0.45, delay: index * 0.05, ease: 'easeOut' }}
       whileHover={{ y: -4, scale: 1.02 }}
       onClick={() => onClick(planet)}
-      className="relative cursor-pointer rounded-[24px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl transition-colors hover:border-white/20"
+      className="relative cursor-pointer rounded-[24px] border border-white/5 bg-surface p-6 shadow-premium-card transition-all duration-300 hover:border-gold/30 hover:bg-surface-hover"
       style={{
         boxShadow: `0 0 0 0 ${color}00`,
       }}
@@ -195,7 +195,7 @@ function ModalContent({ planet, onClose }: { planet: PlanetInfo; onClose: () => 
 
   return (
     <div
-      className="relative w-full max-w-lg rounded-[32px] border border-white/10 bg-[#05060A]/95 p-8 shadow-2xl backdrop-blur-xl"
+      className="relative w-full max-w-lg rounded-[32px] border border-white/5 bg-background p-8 shadow-[0_0_60px_rgba(212,175,55,0.15)] backdrop-blur-3xl"
       style={{ boxShadow: `0 0 80px 0 ${color}20, 0 32px 64px -16px rgba(0,0,0,0.8)` }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -265,8 +265,7 @@ function ModalContent({ planet, onClose }: { planet: PlanetInfo; onClose: () => 
       {/* CTA */}
       <a
         href="/ask-astra"
-        className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold text-[#05060A] transition-opacity hover:opacity-90"
-        style={{ background: 'linear-gradient(135deg, #D4AF37, #f0d060)' }}
+        className="flex w-full items-center justify-center gap-2 rounded-[16px] py-4 text-sm font-semibold text-black bg-gold shadow-goldGlow transition-all hover:bg-gold-muted hover:scale-[1.02]"
       >
         Discuss with Astra
         <span className="text-base">→</span>
@@ -294,8 +293,7 @@ function EmptyState() {
       </div>
       <Link
         href="/birth-form"
-        className="rounded-2xl px-6 py-3 text-sm font-semibold text-[#05060A] transition-opacity hover:opacity-90"
-        style={{ background: 'linear-gradient(135deg, #D4AF37, #f0d060)' }}
+        className="rounded-[16px] px-6 py-3.5 text-sm font-semibold text-black bg-gold shadow-goldGlow transition-all hover:bg-gold-muted hover:scale-[1.02]"
       >
         Generate Birth Chart →
       </Link>

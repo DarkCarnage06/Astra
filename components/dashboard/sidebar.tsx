@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useClerk, useUser } from '@clerk/nextjs';
 
 // ---------------------------------------------------------------------------
@@ -42,17 +42,35 @@ export function DashboardSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const { signOut } = useClerk();
   const { user } = useUser();
+  const [userPlan, setUserPlan] = useState<'FREE' | 'PRO' | 'PREMIUM' | null>(null);
+
+  useEffect(() => {
+    const fetchPlan = async () => {
+      try {
+        const res = await fetch('/api/payment/history');
+        if (res.ok) {
+          const data = await res.json();
+          setUserPlan(data.plan);
+        }
+      } catch (err) {
+        console.error('Failed to load user plan for sidebar:', err);
+      }
+    };
+    if (user) {
+      fetchPlan();
+    }
+  }, [user]);
 
   return (
     <motion.aside
       animate={{ width: collapsed ? 72 : 256 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="relative flex h-full flex-col border-r border-white/10 bg-[#05060A]/80 backdrop-blur-2xl"
+      className="relative flex h-full flex-col border-r border-white/5 bg-background/90 backdrop-blur-3xl"
     >
       {/* Top — Logo */}
-      <div className="flex items-center gap-3 border-b border-white/10 px-4 py-5">
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#D4AF37]/15">
-          <span className="text-lg text-[#D4AF37]">✦</span>
+      <div className="flex items-center gap-3 border-b border-white/5 px-4 py-5">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gold/10">
+          <span className="text-lg text-gold">✦</span>
         </div>
         <AnimatePresence>
           {!collapsed && (
@@ -61,7 +79,7 @@ export function DashboardSidebar() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
               transition={{ duration: 0.2 }}
-              className="font-display text-lg font-semibold tracking-[0.15em] text-white"
+              className="font-display text-lg font-semibold tracking-[0.15em] text-text"
             >
               ASTRA
             </motion.span>
@@ -77,16 +95,16 @@ export function DashboardSidebar() {
             <Link
               key={href}
               href={href}
-              className={`group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+              className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                 active
-                  ? 'bg-[#D4AF37]/15 text-[#D4AF37]'
-                  : 'text-[#B8BCC8] hover:bg-white/5 hover:text-white'
+                  ? 'text-gold'
+                  : 'text-secondary hover:bg-white/5 hover:text-text'
               }`}
             >
               {active && (
                 <motion.div
                   layoutId="sidebar-indicator"
-                  className="absolute inset-0 rounded-2xl bg-[#D4AF37]/10 ring-1 ring-[#D4AF37]/30"
+                  className="absolute inset-0 rounded-xl bg-gradient-to-r from-gold/10 to-transparent border-l-2 border-gold"
                   transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                 />
               )}
@@ -111,42 +129,45 @@ export function DashboardSidebar() {
 
       {/* Upgrade banner */}
       <AnimatePresence>
-        {!collapsed && (
+        {!collapsed && userPlan !== 'PRO' && userPlan !== 'PREMIUM' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="mx-2 mb-3 overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/8 p-4"
+            className="mx-3 mb-4 overflow-hidden rounded-[16px] border border-gold/10 bg-gradient-to-b from-gold/5 to-transparent p-4 relative"
           >
-            <div className="mb-2 flex items-center gap-2">
-              <Crown size={14} className="text-[#D4AF37]" />
-              <p className="text-xs font-semibold text-[#D4AF37]">Go Premium</p>
+            <div className="absolute top-0 right-0 w-16 h-16 bg-gold/10 blur-2xl rounded-full" />
+            <div className="relative z-10">
+              <div className="mb-2 flex items-center gap-2">
+                <Crown size={14} className="text-gold" />
+                <p className="text-xs font-semibold text-gold tracking-wide uppercase">Go Premium</p>
+              </div>
+              <p className="mb-4 text-[11px] leading-relaxed text-secondary/80">
+                Unlock deeper layers of your chart and relationships.
+              </p>
+              <Link
+                href="/dashboard/billing"
+                className="block rounded-lg bg-surface border border-gold/20 py-2 text-center text-xs font-semibold text-gold transition hover:bg-gold hover:text-black hover:border-gold"
+              >
+                Upgrade Now
+              </Link>
             </div>
-            <p className="mb-3 text-[11px] leading-4 text-[#B8BCC8]">
-              Unlock compatibility, PDF reports & more
-            </p>
-            <Link
-              href="/dashboard/billing"
-              className="block rounded-xl bg-[#D4AF37] py-2 text-center text-xs font-bold text-black transition hover:bg-[#D4AF37]/90"
-            >
-              Upgrade Now
-            </Link>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* User + Sign out */}
-      <div className="border-t border-white/10 px-2 py-3">
+      <div className="border-t border-white/5 px-2 py-3">
         <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3 px-2'}`}>
           {user?.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={user.imageUrl}
               alt={user.firstName ?? 'User'}
-              className="h-8 w-8 flex-shrink-0 rounded-full object-cover ring-2 ring-[#D4AF37]/30"
+              className="h-8 w-8 flex-shrink-0 rounded-full object-cover border border-white/10"
             />
           ) : (
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#D4AF37]/20 text-xs font-bold text-[#D4AF37]">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gold/10 text-xs font-bold text-gold border border-gold/20">
               {user?.firstName?.[0] ?? 'A'}
             </div>
           )}
@@ -159,10 +180,10 @@ export function DashboardSidebar() {
                 transition={{ duration: 0.2 }}
                 className="flex flex-1 flex-col overflow-hidden"
               >
-                <span className="truncate text-xs font-semibold text-white">
+                <span className="truncate text-xs font-semibold text-text">
                   {user?.firstName ?? 'Astra User'}
                 </span>
-                <span className="truncate text-[10px] text-[#B8BCC8]">
+                <span className="truncate text-[10px] text-secondary">
                   {user?.emailAddresses[0]?.emailAddress ?? ''}
                 </span>
               </motion.div>
@@ -176,7 +197,7 @@ export function DashboardSidebar() {
                 exit={{ opacity: 0 }}
                 onClick={() => signOut({ redirectUrl: '/' })}
                 title="Sign out"
-                className="flex-shrink-0 rounded-lg p-1.5 text-[#B8BCC8] transition hover:bg-white/10 hover:text-white"
+                className="flex-shrink-0 rounded-lg p-1.5 text-secondary transition hover:bg-white/10 hover:text-text"
               >
                 <LogOut size={14} />
               </motion.button>
@@ -188,7 +209,7 @@ export function DashboardSidebar() {
       {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed((c) => !c)}
-        className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-[#05060A] text-[#B8BCC8] shadow-lg transition hover:text-white"
+        className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border border-white/5 bg-surface text-secondary shadow-lg transition hover:text-text hover:border-white/20"
       >
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>

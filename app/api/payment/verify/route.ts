@@ -4,10 +4,17 @@ import crypto from 'crypto';
 import { db } from '../../../../lib/db';
 import { PLANS, type PlanKey } from '../../../../lib/razorpay';
 import type { Plan } from '@prisma/client';
+import { PAYMENTS_ENABLED } from '../../../../config/payments';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  if (!PAYMENTS_ENABLED) {
+    return NextResponse.json(
+      { error: 'payments_disabled', message: 'Payments are temporarily disabled. Premium features are free!' },
+      { status: 403 }
+    );
+  }
   let clerkId: string | null = null;
   const mockHeader = request.headers.get('x-mock-clerk-id');
   if (mockHeader && process.env.NODE_ENV === 'development') {

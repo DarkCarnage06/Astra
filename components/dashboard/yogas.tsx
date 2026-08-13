@@ -64,11 +64,11 @@ export default function YogasDashboard({ chart }: YogasDashboardProps) {
         transition={{ duration: 0.5 }}
         className="mb-8"
       >
-        <p className="text-sm uppercase tracking-[0.28em] text-[#D4AF37] mb-2">Astrological Alignments</p>
-        <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-gold mb-3">Astrological Alignments</p>
+        <h1 className="font-display text-4xl font-medium tracking-tight text-text sm:text-5xl">
           Yogas &amp; Doshas
         </h1>
-        <p className="mt-2 text-[#B8BCC8]">
+        <p className="mt-4 text-[14px] text-secondary leading-relaxed max-w-2xl">
           Discover the cosmic patterns, auspicious configurations (Yogas), and challenging afflictions (Doshas) calculated from your birth chart.
         </p>
       </motion.div>
@@ -84,16 +84,16 @@ export default function YogasDashboard({ chart }: YogasDashboardProps) {
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`flex items-center gap-2 rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+            className={`flex items-center gap-2 rounded-full px-5 py-2 text-[11px] font-semibold uppercase tracking-widest transition-all duration-300 ${
               selectedCategory === cat
-                ? 'bg-[#D4AF37] text-black font-bold shadow-lg shadow-[#D4AF37]/20'
-                : 'border border-white/10 bg-white/5 text-[#B8BCC8] hover:bg-white/10 hover:text-white'
+                ? 'bg-gold text-black shadow-goldGlow'
+                : 'border border-white/5 bg-surface text-secondary hover:bg-surface-hover hover:text-text'
             }`}
           >
             {cat === 'All' ? 'All Formations' : cat === 'Rajyoga' ? 'Rajyogas' : cat === 'Dosha' ? 'Doshas' : 'Other Yogas'}
             <span
-              className={`rounded-full px-1.5 py-0.5 text-[9px] ${
-                selectedCategory === cat ? 'bg-black/20 text-black' : 'bg-white/10 text-[#B8BCC8]'
+              className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                selectedCategory === cat ? 'bg-black/20 text-black' : 'bg-white/5 text-secondary'
               }`}
             >
               {categoryCounts[cat]}
@@ -115,10 +115,10 @@ export default function YogasDashboard({ chart }: YogasDashboardProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05, duration: 0.4 }}
               key={yoga.name}
-              className={`group flex flex-col justify-between rounded-3xl border p-6 backdrop-blur-xl transition-all duration-300 ${
+              className={`group flex flex-col justify-between rounded-[24px] border p-6 shadow-premium-card transition-all duration-300 relative overflow-hidden ${
                 yoga.category === 'Dosha'
-                  ? 'border-red-500/10 bg-red-950/5 hover:border-red-500/20'
-                  : 'border-white/10 bg-white/[0.03] hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/5'
+                  ? 'border-red-500/10 bg-red-950/20 hover:border-red-500/30'
+                  : 'border-white/5 bg-surface hover:border-gold/30 hover:bg-surface-hover'
               }`}
             >
               <div>

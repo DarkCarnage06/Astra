@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
+import { LocationAutocomplete, type LocationResult } from '../birth-form/location-autocomplete';
 import { THEME } from '../../config/theme';
 import type { ChartResponse, GeocodeResponse } from '../../lib/types/chart';
 import type { AiReading } from '../../lib/types/chart';
@@ -149,7 +150,7 @@ function InputField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={`w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 text-sm text-white placeholder-[#B8BCC8]/40 backdrop-blur-sm transition-all outline-none focus:border-[#D4AF37]/60 focus:ring-2 focus:ring-[#D4AF37]/15 ${Icon ? 'pl-10 pr-4' : 'px-4'}`}
+          className={`w-full rounded-[16px] border border-white/10 bg-background/50 py-3 text-[14px] text-text placeholder-secondary/40 transition-all outline-none focus:border-gold/30 focus:bg-surface-hover focus:shadow-[0_0_20px_rgba(212,175,55,0.05)] ${Icon ? 'pl-10 pr-4' : 'px-4'}`}
         />
       </div>
     </div>
@@ -317,6 +318,7 @@ export function CompatibilityTool() {
   const [form, setForm] = useState<PartnerForm>({
     name: '', date: '', time: '12:00', knownTime: false, place: '',
   });
+  const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null);
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
 
@@ -384,34 +386,27 @@ export function CompatibilityTool() {
       setError("Please enter your partner's date of birth.");
       return;
     }
-    if (!form.place.trim()) {
-      setError("Please enter your partner's birthplace.");
+    if (!form.place.trim() || !selectedLocation) {
+      setError("Please select a valid birthplace from the suggestions.");
       return;
     }
 
     setError(null);
     setPhase('loading');
 
-    // Step 1: Geocode
-    const geo = await geocodePlace(form.place);
-    if (!geo) {
-      setPhase('form');
-      return;
-    }
-
-    // Step 2: Fetch partner chart from Next.js proxy route with persist=false
+    // Step 1: Fetch partner chart from Next.js proxy route with persist=false
     try {
       const url = '/api/chart';
       const body = {
         name: form.name,
         date: form.date,
         time: form.knownTime ? form.time : '12:00',
-        place: form.place,
+        place: selectedLocation.displayPlace,
         knownTime: form.knownTime,
-        latitude: geo.latitude,
-        longitude: geo.longitude,
-        timezone: geo.timezone,
-        displayPlace: geo.displayName,
+        latitude: selectedLocation.latitude,
+        longitude: selectedLocation.longitude,
+        timezone: selectedLocation.timezone,
+        displayPlace: selectedLocation.displayPlace,
         persist: false,
       };
 
@@ -508,11 +503,11 @@ export function CompatibilityTool() {
         transition={{ duration: 0.5 }}
         className="mb-10"
       >
-        <p className="mb-2 text-sm uppercase tracking-[0.28em] text-[#D4AF37]">Vedic Compatibility</p>
-        <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em] text-gold">Vedic Compatibility</p>
+        <h1 className="font-display text-4xl font-medium tracking-tight text-text sm:text-5xl">
           Cosmic Connection
         </h1>
-        <p className="mt-2 text-[#B8BCC8]">
+        <p className="mt-4 text-[14px] text-secondary leading-relaxed max-w-2xl">
           Discover the astrological harmony between you and your partner.
         </p>
       </motion.div>
@@ -580,7 +575,7 @@ export function CompatibilityTool() {
                         value={form.time}
                         onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
                         disabled={!form.knownTime}
-                        className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-10 pr-4 text-sm text-white backdrop-blur-sm transition-all outline-none focus:border-[#D4AF37]/60 focus:ring-2 focus:ring-[#D4AF37]/15 disabled:opacity-40"
+                        className="w-full rounded-[16px] border border-white/10 bg-background/50 py-3 pl-10 pr-4 text-[14px] text-text transition-all outline-none focus:border-gold/30 focus:bg-surface-hover focus:shadow-[0_0_20px_rgba(212,175,55,0.05)] disabled:opacity-40"
                       />
                     </div>
                     <label className="flex cursor-pointer items-center gap-2 text-xs text-[#B8BCC8]/70">
@@ -596,14 +591,12 @@ export function CompatibilityTool() {
 
                   {/* Place */}
                   <div className="sm:col-span-2">
-                    <InputField
-                      id="partner-place"
-                      label="Birthplace"
-                      type="text"
-                      value={form.place}
-                      onChange={(v) => setForm((f) => ({ ...f, place: v }))}
-                      placeholder="City, Country (e.g. Paris, France)"
-                      icon={MapPin}
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-[#B8BCC8]">
+                      Birthplace
+                    </label>
+                    <LocationAutocomplete
+                      onLocationSelect={(loc) => setSelectedLocation(loc)}
+                      onInputChange={(v) => setForm((f) => ({ ...f, place: v }))}
                     />
                   </div>
                 </div>
@@ -626,7 +619,7 @@ export function CompatibilityTool() {
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   disabled={geocoding}
-                  className="mt-7 flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#D4AF37] to-[#B8902A] px-6 py-3.5 text-sm font-semibold text-[#05060A] shadow-[0_0_28px_rgba(212,175,55,0.28)] transition hover:shadow-[0_0_40px_rgba(212,175,55,0.4)] disabled:opacity-60"
+                  className="mt-7 flex w-full items-center justify-center gap-2.5 rounded-[16px] bg-gold px-6 py-4 text-sm font-semibold text-black shadow-goldGlow transition-all hover:bg-gold-muted hover:scale-[1.01] disabled:opacity-50 disabled:shadow-none"
                 >
                   {geocoding ? (
                     <>
@@ -702,7 +695,7 @@ export function CompatibilityTool() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl"
+              className="rounded-[28px] border border-white/5 bg-surface p-6 shadow-premium-card"
             >
               <p className="mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
                 ✦ The Pairing
@@ -756,7 +749,7 @@ export function CompatibilityTool() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl"
+              className="rounded-[28px] border border-white/5 bg-surface p-6 shadow-premium-card"
             >
               <p className="mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
                 ✦ Compatibility Dimensions
@@ -772,7 +765,7 @@ export function CompatibilityTool() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 + i * 0.06, duration: 0.4 }}
                       whileHover={{ y: -3, transition: { duration: 0.2 } }}
-                      className="rounded-2xl border border-white/[0.07] bg-black/20 p-4 transition hover:border-white/15"
+                      className="rounded-[24px] border border-white/5 bg-surface-hover p-5 shadow-premium-card transition-all hover:border-white/15"
                     >
                       <div className="mb-3 flex items-center gap-2.5">
                         <div

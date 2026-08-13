@@ -49,22 +49,22 @@ export function Navbar() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7 }}
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#05060A]/70 py-3 backdrop-blur-xl' : 'bg-transparent py-5'}`}
+        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-background/90 border-b border-white/5 py-3 backdrop-blur-3xl' : 'bg-transparent py-5'}`}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 lg:px-8">
           {/* Brand */}
-          <a href="#" className="flex items-center gap-3 text-[1.05rem] font-semibold tracking-[0.2em] text-white">
-            <span className="text-lg text-[#D4AF37]">✦</span>
+          <a href="#" className="flex items-center gap-3 text-[1.05rem] font-semibold tracking-[0.2em] text-text">
+            <span className="text-lg text-gold">✦</span>
             ASTRA
           </a>
 
           {/* Desktop nav */}
-          <nav className="hidden items-center gap-8 text-sm text-[#B8BCC8] md:flex">
+          <nav className="hidden items-center gap-8 text-sm text-secondary md:flex">
             {navItems.map((item) => (
               <a
                 key={item.label}
                 href={item.href}
-                className="transition hover:text-white"
+                className="transition hover:text-text"
               >
                 {item.label}
               </a>
@@ -75,13 +75,13 @@ export function Navbar() {
           <div className="hidden items-center gap-3 md:flex">
             <Link
               href="/sign-in"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:border-white/25 hover:text-white"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm text-secondary transition hover:border-white/20 hover:text-text"
             >
               Login
             </Link>
             <Link
               href="/sign-up"
-              className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+              className="rounded-full bg-gold px-4 py-2 text-sm font-semibold text-black transition hover:bg-gold-muted shadow-goldGlow"
             >
               Get Started
             </Link>
@@ -154,19 +154,19 @@ export function Navbar() {
               className="fixed bottom-0 right-0 top-0 z-50 flex w-[80vw] max-w-[320px] flex-col bg-[#05060A]/95 shadow-2xl backdrop-blur-2xl md:hidden"
             >
               {/* Drawer top bar */}
-              <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+              <div className="flex items-center justify-between border-b border-white/5 px-6 py-5">
                 <a
                   href="#"
                   onClick={closeMenu}
-                  className="flex items-center gap-2 text-[1rem] font-semibold tracking-[0.2em] text-white"
+                  className="flex items-center gap-2 text-[1rem] font-semibold tracking-[0.2em] text-text"
                 >
-                  <span className="text-[#D4AF37]">✦</span>
+                  <span className="text-gold">✦</span>
                   ASTRA
                 </a>
                 <button
                   onClick={closeMenu}
                   aria-label="Close menu"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/5 text-secondary hover:text-text hover:bg-surface"
                 >
                   <X size={16} />
                 </button>
@@ -182,9 +182,9 @@ export function Navbar() {
                     initial={{ opacity: 0, x: 24 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.06 + index * 0.055, duration: 0.3 }}
-                    className="group flex items-center gap-3 rounded-2xl px-4 py-3.5 text-[0.95rem] font-medium text-[#B8BCC8] transition hover:bg-white/5 hover:text-white"
+                    className="group flex items-center gap-3 rounded-2xl px-4 py-3.5 text-[0.95rem] font-medium text-secondary transition hover:bg-surface-hover hover:text-text"
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37]/40 transition group-hover:bg-[#D4AF37]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-gold/40 transition group-hover:bg-gold" />
                     {item.label}
                   </motion.a>
                 ))}
@@ -195,26 +195,26 @@ export function Navbar() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.28, duration: 0.35 }}
-                className="flex flex-col gap-3 border-t border-white/10 px-6 py-6"
+                className="flex flex-col gap-3 border-t border-white/5 px-6 py-6"
               >
                 <Link
                   href="/sign-in"
                   onClick={closeMenu}
-                  className="flex items-center justify-center rounded-full border border-white/10 px-5 py-3 text-sm text-white/80 transition hover:border-white/25 hover:text-white"
+                  className="flex items-center justify-center rounded-full border border-white/10 px-5 py-3 text-sm text-secondary transition hover:border-white/20 hover:text-text"
                 >
                   Login
                 </Link>
                 <Link
                   href="/sign-up"
                   onClick={closeMenu}
-                  className="flex items-center justify-center rounded-full bg-[#D4AF37]/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#D4AF37]/25"
+                  className="flex items-center justify-center rounded-full bg-gold px-5 py-3 text-sm font-semibold text-black shadow-goldGlow transition hover:bg-gold-muted"
                 >
                   Get Started ✦
                 </Link>
               </motion.div>
 
               {/* Decorative gold gradient accent */}
-              <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-[#D4AF37]/8 blur-3xl" />
+              <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-gold/10 blur-3xl" />
             </motion.div>
           </>
         )}
