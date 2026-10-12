@@ -94,8 +94,18 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
   // Helper for inclusive relative house counting in Vedic astrology:
   // e.g., Same house is 1st (conjunction); from House 1 to House 7 is 7th (mutual aspect)
   const getRelativeHouse = (targetHouse: number, sourceHouse: number): number => {
-    return ((targetHouse - sourceHouse + 12) % 12) + 1;
-  };
+  // Returns inclusive relative house count (1 = same house, 2 = next house, ...)
+  return ((targetHouse - sourceHouse + 12) % 12) + 1;
+};
+
+// Helper to format ordinal numbers (e.g., 1st, 2nd, 3rd, 4th)
+function ordinal(n: number): string {
+  const suffixes = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
+}
+
+
 
   // Helper for planet aspecting a house
   // Standard Vedic aspects: 7th for all. Mars aspect 4th, 7th, 8th. Jupiter aspect 5th, 7th, 9th. Saturn aspect 3rd, 7th, 10th.
