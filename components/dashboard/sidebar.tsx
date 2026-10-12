@@ -14,6 +14,7 @@ import {
   Crown,
   Award,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -26,6 +27,7 @@ import { useClerk, useUser } from '@clerk/nextjs';
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/ask-astra', label: 'Ask Astra', icon: MessageSquare },
+  { href: '/dashboard/panchang', label: 'Today\'s Panchang', icon: Calendar },
   { href: '/dashboard/yogas', label: 'Yogas & Doshas', icon: Award },
   { href: '/dashboard/remedies', label: 'Remedies', icon: Sparkles },
   { href: '/dashboard/chart', label: 'Birth Chart', icon: Star },

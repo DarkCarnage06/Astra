@@ -8,6 +8,7 @@ const isPublicRoute = createRouteMatcher([
   '/birth-form(.*)',
   '/api/geocode(.*)',
   '/api/health(.*)',
+  '/api/panchang(.*)',
   '/robots.txt',
   '/sitemap.xml',
 ]);

@@ -12,6 +12,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard/compatibility': 'Compatibility',
   '/dashboard/settings': 'Settings',
   '/dashboard/billing': 'Billing & Plans',
+  '/dashboard/panchang': "Today's Panchang",
+  '/dashboard/yogas': 'Yogas & Doshas',
+  '/dashboard/remedies': 'Remedies',
   '/ask-astra': 'Ask Astra',
 };
 

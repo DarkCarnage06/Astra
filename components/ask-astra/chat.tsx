@@ -15,10 +15,10 @@ interface Message {
 }
 
 const SUGGESTIONS = [
-  { text: 'How will the current Dasha affect my career?', category: 'career' },
-  { text: 'Explain the placement of Venus in my chart.', category: 'relationship' },
-  { text: 'What does my Moon Nakshatra say about my mind?', category: 'general' },
-  { text: 'What financial potential does my chart reveal?', category: 'finance' },
+  { text: 'Where is my career heading right now and what moves should I make?', category: 'career' },
+  { text: 'What does my timing look like for love and serious relationships?', category: 'relationship' },
+  { text: 'What is my strongest path to financial abundance and growth?', category: 'finance' },
+  { text: "How is today's cosmic energy and Panchang looking for my decisions?", category: 'general' },
 ];
 
 export function AskAstraChat() {

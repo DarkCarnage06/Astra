@@ -384,3 +384,126 @@ def calculate_cosmic_brief(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Cosmic brief calculation failed: {exc}") from exc
 
+
+# ---------------------------------------------------------------------------
+# GET /api/panchang — current Vedic Panchang
+# ---------------------------------------------------------------------------
+@router.get(
+    "/panchang",
+    summary="Current Vedic Panchang (Tithi, Nakshatra, Yoga, Karana, Vaar)",
+    description="Calculates the 5 limbs of Vedic timekeeping using Swiss Ephemeris and Lahiri ayanamsa.",
+)
+def get_panchang(
+    date: str | None = Query(None, description="YYYY-MM-DD format (defaults to today)"),
+    time: str | None = Query(None, description="HH:mm format (defaults to current time)"),
+    latitude: float = Query(28.6139, description="Latitude (default: New Delhi)"),
+    longitude: float = Query(77.2090, description="Longitude (default: New Delhi)"),
+    timezone: str = Query("Asia/Kolkata", description="IANA timezone"),
+) -> dict[str, Any]:
+    from app.services.chart.planet_service import PlanetService
+    from app.services.chart.ayanamsa_service import AyanamsaService
+
+    try:
+        engine = get_ephemeris_engine()
+        now = datetime.now(UTC)
+
+        if date:
+            parts = [int(p) for p in date.split("-")]
+            target_year, target_month, target_day = parts[0], parts[1], parts[2]
+        else:
+            target_year, target_month, target_day = now.year, now.month, now.day
+
+        if time:
+            t_parts = [int(p) for p in time.split(":")]
+            hour_decimal = t_parts[0] + (t_parts[1] / 60.0)
+        else:
+            hour_decimal = now.hour + now.minute / 60.0 + now.second / 3600.0
+
+        jd = engine.get_julian_day(target_year, target_month, target_day, hour_decimal)
+
+        # Calculate planetary longitudes
+        import swisseph as swe
+        sun_long, _, _ = engine.get_planet_longitude(jd, swe.SUN)
+        moon_long, _, _ = engine.get_planet_longitude(jd, swe.MOON)
+
+        # 1. Tithi
+        diff_long = (moon_long - sun_long + 360.0) % 360.0
+        tithi_idx = int(diff_long // 12.0) % 30
+        is_shukla = tithi_idx < 15
+        tithi_names = [
+            "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami",
+            "Shashti", "Saptami", "Ashtami", "Navami", "Dashami",
+            "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi",
+            "Purnima" if is_shukla else "Amavasya"
+        ]
+        tithi_name = tithi_names[tithi_idx % 15]
+
+        # 2. Nakshatra
+        nak_names = [
+            "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra",
+            "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni",
+            "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
+            "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha",
+            "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
+        ]
+        nak_span = 360.0 / 27.0
+        nak_idx = int(moon_long // nak_span) % 27
+        nak_name = nak_names[nak_idx]
+        pada = min(4, int((moon_long % nak_span) // (nak_span / 4.0)) + 1)
+
+        # 3. Yoga
+        yoga_names = [
+            "Vishkambha", "Priti", "Ayushman", "Saubhagya", "Shobhana",
+            "Atiganda", "Sukarma", "Dhriti", "Shoola", "Ganda",
+            "Vriddhi", "Dhruva", "Vyaghata", "Harshana", "Vajra",
+            "Siddhi", "Vyatipata", "Variyan", "Parigha", "Shiva",
+            "Siddha", "Sadhya", "Shubha", "Shukla", "Brahma",
+            "Indra", "Vaidhriti"
+        ]
+        yoga_long = (sun_long + moon_long) % 360.0
+        yoga_idx = int(yoga_long // nak_span) % 27
+        yoga_name = yoga_names[yoga_idx]
+
+        # 4. Karana
+        movable_karanas = ["Bava", "Balava", "Kaulava", "Taitila", "Gara", "Vanija", "Vishti (Bhadra)"]
+        karana_idx = int(diff_long // 6.0) % 60
+        if karana_idx == 0:
+            karana_name = "Kimstughna"
+        elif karana_idx >= 57:
+            karana_name = ["Shakuni", "Chatushpada", "Naga"][karana_idx - 57]
+        else:
+            karana_name = movable_karanas[(karana_idx - 1) % 7]
+
+        # 5. Vaar
+        day_names = ["Ravivar (Sunday)", "Somvar (Monday)", "Mangalvar (Tuesday)", "Budhvar (Wednesday)", "Guruvar (Thursday)", "Shukravar (Friday)", "Shanivar (Saturday)"]
+        dt = datetime(target_year, target_month, target_day)
+        vaar_name = day_names[(dt.weekday() + 1) % 7]
+
+        signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
+
+        return {
+            "date": f"{target_year:04d}-{target_month:02d}-{target_day:02d}",
+            "tithi": {
+                "name": tithi_name,
+                "paksha": "Shukla" if is_shukla else "Krishna",
+                "number": (tithi_idx % 15) + 1,
+                "progressPercent": round(((diff_long % 12.0) / 12.0) * 100, 1),
+            },
+            "nakshatra": {
+                "name": nak_name,
+                "pada": pada,
+                "progressPercent": round(((moon_long % nak_span) / nak_span) * 100, 1),
+            },
+            "yoga": {"name": yoga_name},
+            "karana": {"name": karana_name, "isVishti": karana_name == "Vishti (Bhadra)"},
+            "vaar": {"name": vaar_name},
+            "sunSign": signs[int(sun_long // 30) % 12],
+            "moonSign": signs[int(moon_long // 30) % 12],
+            "sunDegree": round(sun_long % 30, 2),
+            "moonDegree": round(moon_long % 30, 2),
+            "generatedAt": now.isoformat(),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Panchang calculation failed: {exc}") from exc
+
+

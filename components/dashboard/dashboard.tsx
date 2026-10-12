@@ -14,11 +14,14 @@ import {
   Zap,
   RefreshCw,
   AlertCircle,
+  Calendar,
+  ArrowRight,
 } from 'lucide-react';
-import { useEffect, useState, useCallback, memo } from 'react';
+import { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { loadBirthDetails, loadChartResponse, saveBirthDetails, saveChartResponse } from '../../lib/storage';
+import { calculatePanchang } from '../../lib/astrology/panchangEngine';
 import { toast } from '../../lib/toast';
 import { getCachedReadings, setCachedReadings } from '../../services/ai/cache';
 import { track, ANALYTICS_EVENTS } from '../../lib/analytics';
@@ -209,6 +212,18 @@ export function Dashboard() {
   const [readingsError, setReadingsError] = useState<string | null>(null);
   const [streamingTheme, setStreamingTheme] = useState<ReadingTheme | null>(null);
 
+  const todayPanchang = useMemo(() => {
+    try {
+      const lat = birth?.latitude ?? 28.6139;
+      const lon = birth?.longitude ?? 77.2090;
+      const tz = birth?.timezone ?? 'Asia/Kolkata';
+      const city = birth?.displayPlace ?? birth?.place ?? 'New Delhi';
+      return calculatePanchang(new Date(), lat, lon, tz, city);
+    } catch {
+      return null;
+    }
+  }, [birth]);
+
   // ---------------------------------------------------------------------------
   // Load birth + chart from localStorage on mount
   // ---------------------------------------------------------------------------
@@ -381,6 +396,50 @@ export function Dashboard() {
         <StatCard label="Ascendant" value={chart.ascendant.sign} sub={`${chart.ascendant.degree.toFixed(1)}° Rising`} color={THEME.colors.gold} />
         <StatCard label="Mahadasha" value={chart.dasha.mahadasha} sub={`${chart.dasha.remainingYears.toFixed(1)} yrs remaining`} color={THEME.colors.green} />
       </div>
+
+      {/* ---- Today's Panchang Banner ---- */}
+      {todayPanchang && (
+        <motion.div
+          {...fadeUp(0.12)}
+          className="mb-8 relative overflow-hidden rounded-[24px] border border-white/5 bg-gradient-to-r from-surface via-surface to-gold/5 p-6 shadow-premium-card"
+        >
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-start md:items-center gap-4">
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gold/10 border border-gold/20 text-gold">
+                <Calendar size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold">Current Panchang Today</span>
+                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-400 border border-emerald-500/20">
+                    Live
+                  </span>
+                </div>
+                <h2 className="font-display text-xl font-medium text-text">
+                  {todayPanchang.tithi.paksha} {todayPanchang.tithi.name} · {todayPanchang.nakshatra.name} (Pada {todayPanchang.nakshatra.pada})
+                </h2>
+                <p className="text-xs text-secondary mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span>Yoga: <strong className="text-text font-medium">{todayPanchang.yoga.name}</strong></span>
+                  <span>•</span>
+                  <span>Karana: <strong className="text-text font-medium">{todayPanchang.karana.name}</strong></span>
+                  <span>•</span>
+                  <span>Vaar: <strong className="text-text font-medium">{todayPanchang.vaar.name}</strong> ({todayPanchang.vaar.ruler})</span>
+                  <span>•</span>
+                  <span>Rahu Kaal: <strong className="text-rose-300 font-medium">{todayPanchang.timings.rahuKaal.start} – {todayPanchang.timings.rahuKaal.end}</strong></span>
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => router.push('/dashboard/panchang')}
+              className="inline-flex flex-shrink-0 items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-5 py-2.5 text-xs font-semibold text-gold transition hover:bg-gold hover:text-black shadow-goldGlow"
+            >
+              <span>View Full Panchang &amp; Muhurtas</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* ---- Main grid ---- */}
       <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">

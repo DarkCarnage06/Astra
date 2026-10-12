@@ -9,6 +9,8 @@
 
 import type { ChartResponse } from '../lib/types/chart';
 import type { BirthDetails } from '../lib/types/chart';
+import { detectYogasAndDoshas } from '../lib/astrology/yogaDetector';
+import { calculatePanchang } from '../lib/astrology/panchangEngine';
 
 // getSystemPrompt removed in favor of direct PROMPT_CONFIG.persona access
 
@@ -36,6 +38,41 @@ export function buildChartContext(
     .map((h) => `  - House ${h.house}: ${h.sign}`)
     .join('\n');
 
+  // Detect verified Vedic yogas & doshas
+  let yogasText = 'None detected';
+  try {
+    const yogas = detectYogasAndDoshas(chart);
+    if (yogas.length > 0) {
+      yogasText = yogas
+        .map((y) => `  - ${y.name} [${y.category}, Strength: ${y.strength}]: ${y.whyFormed}`)
+        .join('\n');
+    }
+  } catch {
+    // Keep fallback
+  }
+
+  // Calculate current panchang for real-time guidance
+  let panchangBlock = '';
+  try {
+    const lat = birth.latitude ?? 28.6139;
+    const lon = birth.longitude ?? 77.2090;
+    const tz = birth.timezone ?? 'Asia/Kolkata';
+    const panchang = calculatePanchang(new Date(), lat, lon, tz, place);
+    panchangBlock = `
+CURRENT PANCHANG & REAL-TIME WEATHER (TODAY, ${panchang.date}):
+- Tithi: ${panchang.tithi.paksha} ${panchang.tithi.name} (${panchang.tithi.progressPercent}% active)
+- Nakshatra: ${panchang.nakshatra.name} (Pada ${panchang.nakshatra.pada}, Lord: ${panchang.nakshatra.lord})
+- Yoga: ${panchang.yoga.name} (${panchang.yoga.isAuspicious ? 'Auspicious' : 'Caution'})
+- Karana: ${panchang.karana.name}
+- Vaar (Weekday): ${panchang.vaar.name} (${panchang.vaar.ruler})
+- Current Transit Moon Sign: ${panchang.moonSign}
+- Auspicious Abhijit Muhurta: ${panchang.timings.abhijitMuhurta.start} – ${panchang.timings.abhijitMuhurta.end}
+- Inauspicious Rahu Kaal: ${panchang.timings.rahuKaal.start} – ${panchang.timings.rahuKaal.end}
+`.trim();
+  } catch {
+    // Keep fallback
+  }
+
   return `
 BIRTH CHART DATA FOR: ${name}
 Date: ${dateStr} | Time: ${timeStr} | Place: ${place}
@@ -57,5 +94,13 @@ ${planets}
 
 HOUSE SIGNS (Whole-sign system):
 ${houses}
+
+DETECTED VEDIC YOGAS IN THIS CHART:
+${yogasText}
+
+${panchangBlock}
+
+CRITICAL INSTRUCTION FOR AI:
+The above data is your deep internal knowledge. Do NOT tell the user technical formulas like "due to Saturn in 7th house" or "because your 10th lord is in...". Give direct, warm, familiar, and insightful real-life guidance!
 `.trim();
 }

@@ -91,18 +91,24 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
     return SIGN_LORDS[p.sign] === name;
   };
 
+  // Helper for inclusive relative house counting in Vedic astrology:
+  // e.g., Same house is 1st (conjunction); from House 1 to House 7 is 7th (mutual aspect)
+  const getRelativeHouse = (targetHouse: number, sourceHouse: number): number => {
+    return ((targetHouse - sourceHouse + 12) % 12) + 1;
+  };
+
   // Helper for planet aspecting a house
   // Standard Vedic aspects: 7th for all. Mars aspect 4th, 7th, 8th. Jupiter aspect 5th, 7th, 9th. Saturn aspect 3rd, 7th, 10th.
   const planetAspectsHouse = (planetName: string, targetHouse: number): boolean => {
     const p = getPlanet(planetName);
     if (!p) return false;
     const currentHouse = p.house;
-    const diff = (targetHouse - currentHouse + 12) % 12 || 12; // 1 to 12
+    const aspectCount = getRelativeHouse(targetHouse, currentHouse); // 1 to 12
 
-    if (diff === 7) return true; // Everyone aspects 7th
-    if (planetName === 'Mars' && [4, 8].includes(diff)) return true;
-    if (planetName === 'Jupiter' && [5, 9].includes(diff)) return true;
-    if (planetName === 'Saturn' && [3, 10].includes(diff)) return true;
+    if (aspectCount === 7) return true; // Everyone aspects 7th
+    if (planetName === 'Mars' && (aspectCount === 4 || aspectCount === 8)) return true;
+    if (planetName === 'Jupiter' && (aspectCount === 5 || aspectCount === 9)) return true;
+    if (planetName === 'Saturn' && (aspectCount === 3 || aspectCount === 10)) return true;
 
     return false;
   };
@@ -110,6 +116,7 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
   // Declare all house lords and variables at the top to prevent scoping / compilation issues
   const lord1 = getHouseLord(1);
   const lord2 = getHouseLord(2);
+  const lord4 = getHouseLord(4);
   const lord5 = getHouseLord(5);
   const lord6 = getHouseLord(6);
   const lord8 = getHouseLord(8);
@@ -125,24 +132,46 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
   // ---------------------------------------------------------------------------
 
   // 1.1 Gajakesari Yoga
-  // Moon & Jupiter relationship. Jupiter in Kendra (1, 4, 7, 10) from Moon.
+  // Classical Vedic rule (Parashara, Phaladeepika):
+  // When Jupiter is in a Kendra (1st, 4th, 7th, 10th) from Moon, OR in Kendra from Lagna.
   const moonHouse = getHouseOfPlanet('Moon');
   const jupHouse = getHouseOfPlanet('Jupiter');
   if (moonHouse && jupHouse) {
-    const diff = (jupHouse - moonHouse + 12) % 12 || 12;
-    if ([1, 4, 7, 10].includes(diff)) {
+    const houseFromMoon = getRelativeHouse(jupHouse, moonHouse);
+    const isKendraFromMoon = [1, 4, 7, 10].includes(houseFromMoon);
+    const isKendraFromLagna = isKendra(jupHouse);
+
+    if (isKendraFromMoon || isKendraFromLagna) {
       const moonOwnOrExalted = isOwnSign('Moon') || isExalted('Moon');
       const jupOwnOrExalted = isOwnSign('Jupiter') || isExalted('Jupiter');
-      const strength = (moonOwnOrExalted && jupOwnOrExalted) ? 'Strong' : (moonOwnOrExalted || jupOwnOrExalted) ? 'Medium' : 'Low';
+      const jupDebilitated = isDebilitated('Jupiter');
+
+      let strength: 'Low' | 'Medium' | 'Strong' = 'Medium';
+      if ((moonOwnOrExalted || jupOwnOrExalted) && !jupDebilitated) {
+        strength = 'Strong';
+      } else if (jupDebilitated) {
+        strength = 'Low';
+      }
+
+      const relationType = houseFromMoon === 1
+        ? '1st house (conjunction with Moon)'
+        : houseFromMoon === 7
+        ? '7th house (full mutual aspect with Moon)'
+        : `${ordinal(houseFromMoon)} house (Kendra square with Moon)`;
+
+      const formationDetails = isKendraFromMoon
+        ? `Jupiter is placed in the ${relationType}${isKendraFromLagna ? ` and the ${ordinal(jupHouse)} house from Lagna` : ''}, creating the highly auspicious Gajakesari Yoga.`
+        : `Jupiter is fortified in the ${ordinal(jupHouse)} house (Kendra from Lagna), radiating wisdom and divine protection (Lagna Gajakesari).`;
+
       detected.push({
         name: 'Gajakesari Yoga',
         category: 'Rajyoga',
-        significance: 'Brings wisdom, prosperity, fame, long life, and intellectual capacity. Represents the elephant (Gaja) and the lion (Kesari), indicating combined grace and strength.',
-        whyFormed: `Jupiter is in the ${diff === 1 ? '1st (conjunction)' : ordinal(diff)} house relative to the Moon, creating a highly auspicious Kendra relationship.`,
+        significance: 'One of the most auspicious and revered royal yogas in Vedic astrology. Brings supreme wisdom, enduring wealth, spotless reputation, and intellect. Symbolizes the majestic combined grace of the Elephant (Gaja) and royal power of the Lion (Kesari).',
+        whyFormed: `${formationDetails} ${jupOwnOrExalted ? `Jupiter is strongly placed in ${getPlanet('Jupiter')?.sign}. ` : ''}${moonOwnOrExalted ? `Moon is deeply fortified in ${getPlanet('Moon')?.sign}. ` : ''}`,
         strength,
-        affectedLifeAreas: ['Intellect', 'Finance', 'Fame'],
+        affectedLifeAreas: ['Intellect & Wisdom', 'Wealth & Finance', 'Public Fame', 'Leadership'],
         isPositive: true,
-        confidence: 95,
+        confidence: 98,
       });
     }
   }
@@ -284,17 +313,17 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
   // 1.7 Chandra Mangal Yoga
   const marsHouse = getHouseOfPlanet('Mars');
   if (moonHouse && marsHouse) {
-    const diff = (marsHouse - moonHouse + 12) % 12 || 12;
-    if (diff === 1 || diff === 7) {
+    const houseFromMoon = getRelativeHouse(marsHouse, moonHouse);
+    if (houseFromMoon === 1 || houseFromMoon === 7) {
       detected.push({
         name: 'Chandra Mangal Yoga',
         category: 'Rajyoga',
-        significance: 'Generates great financial capability, commercial acumen, energy, and determination. However, it can make the native assertive or restless.',
-        whyFormed: `Moon and Mars are in ${diff === 1 ? 'conjunction' : 'mutual aspect'}, combining emotional energy with physical drive.`,
+        significance: 'Generates great financial capability, commercial acumen, energy, and determination. Combines emotional instinct with relentless dynamic drive to achieve material success.',
+        whyFormed: `Moon and Mars are in ${houseFromMoon === 1 ? 'conjunction in the same house' : 'mutual aspect (7th from each other)'}, uniting intuitive wisdom with decisive action.`,
         strength: 'Medium',
         affectedLifeAreas: ['Wealth Creation', 'Determination', 'Commerce'],
         isPositive: true,
-        confidence: 90,
+        confidence: 92,
       });
     }
   }
@@ -306,8 +335,8 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
     benefics.forEach((pName) => {
       const house = getHouseOfPlanet(pName);
       if (house) {
-        const relativeHouse = (house - referenceHouse + 12) % 12 || 12;
-        if ([6, 7, 8].includes(relativeHouse)) {
+        const relH = getRelativeHouse(house, referenceHouse);
+        if ([6, 7, 8].includes(relH)) {
           count++;
         }
       }
@@ -316,12 +345,12 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
       detected.push({
         name: `${sourceName} Adhi Yoga`,
         category: 'Rajyoga',
-        significance: 'Elevates the person to a position of leadership, high command, luxury, and victory over all rivals. Grants peaceful prosperity and wisdom.',
+        significance: 'Elevates the person to a position of leadership, high command, luxury, and victory over all rivals. Grants peaceful prosperity, dignity, and longevity.',
         whyFormed: `Multiple natural benefics (Jupiter/Venus/Mercury) occupy the 6th, 7th, or 8th houses relative to the ${sourceName}.`,
         strength: count === 3 ? 'Strong' : 'Medium',
         affectedLifeAreas: ['Influence', 'Leadership', 'Protection'],
         isPositive: true,
-        confidence: 88,
+        confidence: 90,
       });
     }
   };
@@ -363,7 +392,7 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
       category: 'Rajyoga',
       significance: 'Grants sharp intelligence, analytical power, excellent communication skills, academic success, and administrative ability.',
       whyFormed: `Sun and Mercury are conjoint in the ${ordinal(sunHouse)} house, blending solar vitality with mercurial intellect.`,
-      strength: isGoodHouse ? 'Strong' : 'Low',
+      strength: isGoodHouse ? 'Strong' : 'Medium',
       affectedLifeAreas: ['Intellect', 'Speech', 'Education'],
       isPositive: true,
       confidence: 99,
@@ -395,7 +424,7 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
   const beneficIn10Lagna = ['Jupiter', 'Venus', 'Mercury'].some((pName) => getHouseOfPlanet(pName) === 10);
   const beneficIn10Moon = ['Jupiter', 'Venus', 'Mercury'].some((pName) => {
     const h = getHouseOfPlanet(pName);
-    return h && moonHouse && ((h - moonHouse + 12) % 12 || 12) === 10;
+    return h && moonHouse && getRelativeHouse(h, moonHouse) === 10;
   });
   if (beneficIn10Lagna || beneficIn10Moon) {
     detected.push({
@@ -408,6 +437,24 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
       isPositive: true,
       confidence: 88,
     });
+  }
+
+  // 1.13 Kahala Yoga
+  if (lord4 && lord9) {
+    const h4 = getHouseOfPlanet(lord4);
+    const h9 = getHouseOfPlanet(lord9);
+    if (h4 && h9 && isKendra(h4) && isKendra(h9)) {
+      detected.push({
+        name: 'Kahala Yoga',
+        category: 'Rajyoga',
+        significance: 'Bestows a firm, resolute personality, physical vitality, command over large groups of people, and unwavering courage in challenging times.',
+        whyFormed: `The 4th house lord (${lord4}) and 9th house lord (${lord9}) are both fortified in Kendra angular houses.`,
+        strength: 'Medium',
+        affectedLifeAreas: ['Authority', 'Endurance', 'Courage'],
+        isPositive: true,
+        confidence: 88,
+      });
+    }
   }
 
   // 1.13 Vasumati Yoga
@@ -538,7 +585,7 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
     });
   }
 
-  // 2.5 Kemadruma Dosha
+  // 2.5 Kemadruma Dosha (with Kemadruma Bhanga Cancellation)
   if (moonHouse) {
     const secondFromMoon = (moonHouse % 12) + 1;
     const twelfthFromMoon = ((moonHouse - 2 + 12) % 12) + 1;
@@ -549,16 +596,38 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
     });
 
     if (!hasPlanetAdjacent) {
-      detected.push({
-        name: 'Kemadruma Dosha',
-        category: 'Dosha',
-        significance: 'Indicates periods of deep isolation, feeling unsupported, financial struggles, or emotional loneliness, even when surrounded by others.',
-        whyFormed: 'There are no planets (excluding Sun, Rahu, Ketu) situated in the adjacent 2nd and 12th houses from the Moon.',
-        strength: 'Strong',
-        affectedLifeAreas: ['Peace of mind', 'Wealth accumulation', 'Social support'],
-        isPositive: false,
-        confidence: 90,
-      });
+      // Cancellation check: Moon in Kendra from Lagna, or any major planet in Kendra from Moon or Lagna
+      const moonInKendra = isKendra(moonHouse);
+      const planetInKendraFromMoon = chart.planets.some(
+        (p) => !['Moon', 'Sun', 'Rahu', 'Ketu'].includes(p.name) && [1, 4, 7, 10].includes(getRelativeHouse(p.house, moonHouse))
+      );
+      const planetInKendraFromLagna = chart.planets.some(
+        (p) => !['Moon', 'Sun', 'Rahu', 'Ketu'].includes(p.name) && isKendra(p.house)
+      );
+
+      if (moonInKendra || planetInKendraFromMoon || planetInKendraFromLagna) {
+        detected.push({
+          name: 'Kemadruma Bhanga Rajyoga',
+          category: 'Rajyoga',
+          significance: 'Cancels the loneliness or hardship of Kemadruma and transforms it into extraordinary self-reliance, profound inner wisdom, and eventual massive success.',
+          whyFormed: `Although adjacent houses to Moon are empty, the dosha is cancelled because ${moonInKendra ? 'the Moon is stationed in a protective Kendra house from Lagna' : 'planets occupy Kendra positions supporting the Moon and Ascendant'}.`,
+          strength: 'Medium',
+          affectedLifeAreas: ['Inner Resilience', 'Self-made Success', 'Mental Strength'],
+          isPositive: true,
+          confidence: 90,
+        });
+      } else {
+        detected.push({
+          name: 'Kemadruma Dosha',
+          category: 'Dosha',
+          significance: 'Indicates periods of deep isolation, feeling unsupported, financial struggles, or emotional loneliness, even when surrounded by others.',
+          whyFormed: 'There are no planets (excluding Sun, Rahu, Ketu) situated in the adjacent 2nd and 12th houses from the Moon, and no Kendra cancellation is present.',
+          strength: 'Strong',
+          affectedLifeAreas: ['Peace of mind', 'Wealth accumulation', 'Social support'],
+          isPositive: false,
+          confidence: 85,
+        });
+      }
     }
   }
 
@@ -616,7 +685,24 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
     });
   }
 
-  // 3.2 Sanyasa Yoga
+  // 3.2 Guru Mangal Yoga
+  if (jupHouse && marsHouse) {
+    const relH = getRelativeHouse(marsHouse, jupHouse);
+    if (relH === 1 || relH === 7 || [4, 10].includes(relH)) {
+      detected.push({
+        name: 'Guru Mangal Yoga',
+        category: 'Yoga',
+        significance: 'Harmonizes high righteousness (Jupiter) with decisive courage (Mars). Bestows administrative prowess, strategic acumen, real estate acquisition, and strong moral convictions.',
+        whyFormed: `Jupiter and Mars are in ${relH === 1 ? 'conjunction in the same house' : `${ordinal(relH)} house relationship`}, uniting spiritual wisdom with physical vitality.`,
+        strength: (relH === 1 || relH === 7) ? 'Strong' : 'Medium',
+        affectedLifeAreas: ['Leadership', 'Property & Assets', 'Courage'],
+        isPositive: true,
+        confidence: 92,
+      });
+    }
+  }
+
+  // 3.3 Sanyasa Yoga
   const houseCounts: Record<number, number> = {};
   chart.planets.forEach((p) => {
     if (['Rahu', 'Ketu'].includes(p.name)) return;
@@ -636,7 +722,7 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
     });
   }
 
-  // 3.3 Daridra Yoga
+  // 3.4 Daridra Yoga
   const houseLord11 = getHouseOfPlanet(lord11);
   if (houseLord11 && isDusthana(houseLord11)) {
     detected.push({
@@ -651,7 +737,7 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
     });
   }
 
-  // 3.4 Sunapha, Anapha, Durudhara Yogas
+  // 3.5 Sunapha, Anapha, Durudhara Yogas (Lunar Yogas)
   if (moonHouse) {
     const secondH = (moonHouse % 12) + 1;
     const twelfthH = ((moonHouse - 2 + 12) % 12) + 1;
@@ -691,6 +777,49 @@ export function detectYogasAndDoshas(chart: ChartResponse): DetectedYoga[] {
         affectedLifeAreas: ['Well-being', 'Reputation'],
         isPositive: true,
         confidence: 90,
+      });
+    }
+  }
+
+  // 3.6 Ubhayachari, Vesi, Vasi Yogas (Solar Yogas)
+  if (sunHouse) {
+    const secondFromSun = (sunHouse % 12) + 1;
+    const twelfthFromSun = ((sunHouse - 2 + 12) % 12) + 1;
+    const hasIn2Sun = chart.planets.some((p) => !['Sun', 'Moon', 'Rahu', 'Ketu'].includes(p.name) && p.house === secondFromSun);
+    const hasIn12Sun = chart.planets.some((p) => !['Sun', 'Moon', 'Rahu', 'Ketu'].includes(p.name) && p.house === twelfthFromSun);
+
+    if (hasIn2Sun && hasIn12Sun) {
+      detected.push({
+        name: 'Ubhayachari Yoga',
+        category: 'Yoga',
+        significance: 'Bestows immense charm, balanced speech, noble status, public favor, and physical symmetry. Native rises to eminence and lives comfortably.',
+        whyFormed: 'The Sun is fortified on both sides with planets in the 2nd and 12th houses from its placement.',
+        strength: 'Strong',
+        affectedLifeAreas: ['Social Status', 'Eminence', 'Eloquence'],
+        isPositive: true,
+        confidence: 92,
+      });
+    } else if (hasIn2Sun) {
+      detected.push({
+        name: 'Vesi Yoga',
+        category: 'Yoga',
+        significance: 'Grants truthfulness, steady work ethic, eloquence, and respect from superiors.',
+        whyFormed: 'A planet (other than Moon/nodes) occupies the 2nd house from the Sun.',
+        strength: 'Medium',
+        affectedLifeAreas: ['Reputation', 'Work Ethic'],
+        isPositive: true,
+        confidence: 88,
+      });
+    } else if (hasIn12Sun) {
+      detected.push({
+        name: 'Vasi Yoga',
+        category: 'Yoga',
+        significance: 'Endows deep memory, skill in arts and learning, charitable disposition, and lasting recognition.',
+        whyFormed: 'A planet (other than Moon/nodes) occupies the 12th house from the Sun.',
+        strength: 'Medium',
+        affectedLifeAreas: ['Intellect', 'Charity'],
+        isPositive: true,
+        confidence: 88,
       });
     }
   }
