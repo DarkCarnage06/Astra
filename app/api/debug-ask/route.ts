@@ -1,7 +1,7 @@
 /**
  * app/api/debug-ask/route.ts
- * Temporary diagnostic endpoint — tests each step of the /api/ask pipeline.
- * Remove after production is verified.
+ * Diagnostic endpoint — development-only.
+ * Returns 404 in production to prevent information leakage.
  */
 
 import { NextResponse } from 'next/server';
@@ -10,6 +10,11 @@ import { auth } from '@clerk/nextjs/server';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  // 🔒 Block in production — this endpoint leaks sensitive information
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   const results: Record<string, unknown> = {};
 
   // 1. Environment variables

@@ -129,10 +129,15 @@ export async function POST(request: NextRequest) {
     // Process referral registration if code was passed
     if (referralCode) {
       const uppercaseReferral = referralCode.trim().toUpperCase();
-      const allUsers = await db.user.findMany();
-      const referrer = allUsers.find(
-        (u) => `ASTRA-${u.id.slice(-6).toUpperCase()}` === uppercaseReferral
-      );
+      // Extract the last 6 chars of the user ID from the code (format: ASTRA-XXXXXX)
+      const codeSuffix = uppercaseReferral.replace(/^ASTRA-/, '').toLowerCase();
+
+      // Find the referrer by matching the last 6 chars of their ID — avoids full table scan
+      const referrer = await db.user.findFirst({
+        where: {
+          id: { endsWith: codeSuffix },
+        },
+      });
 
       if (referrer && referrer.id !== user.id) {
         const existingReferral = await db.referral.findUnique({

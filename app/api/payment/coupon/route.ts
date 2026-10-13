@@ -14,14 +14,12 @@ export async function POST(request: NextRequest) {
 
     const uppercaseCode = code.trim().toUpperCase();
 
-    // Auto-seed typical coupons if database is empty
+    // Auto-seed a welcome coupon if database is empty
     const couponCount = await db.coupon.count();
     if (couponCount === 0) {
       await db.coupon.createMany({
         data: [
           { code: 'WELCOME10', discountPct: 10, isActive: true },
-          { code: 'ASTRA50', discountPct: 50, isActive: true },
-          { code: 'FREEPRO', discountPct: 100, isActive: true },
         ]
       });
     }
