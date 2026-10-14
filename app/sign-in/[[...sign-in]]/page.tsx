@@ -16,10 +16,15 @@ export default function SignInPage() {
           <h1 className="font-display text-3xl font-semibold text-white">Sign in to ASTRA</h1>
         </div>
         <SignIn
+          routing="path"
+          path="/sign-in"
+          signUpUrl="/sign-up"
+          fallbackRedirectUrl="/dashboard"
           appearance={{
             elements: {
-              rootBox: 'w-full',
-              card: 'bg-white/[0.04] border border-white/10 backdrop-blur-xl rounded-[24px] shadow-2xl',
+              rootBox: 'w-full max-w-[400px]',
+              cardBox: 'w-full',
+              card: 'bg-[#0A0C14]/90 border border-white/10 backdrop-blur-xl rounded-[24px] shadow-2xl',
               headerTitle: 'text-white font-display',
               headerSubtitle: 'text-[#B8BCC8]',
               formButtonPrimary: 'bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-black font-semibold rounded-full',
