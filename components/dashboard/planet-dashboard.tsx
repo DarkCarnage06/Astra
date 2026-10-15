@@ -8,6 +8,45 @@ import { loadChartResponse } from '../../lib/storage';
 import { THEME } from '../../config/theme';
 import type { PlanetInfo, ChartResponse } from '../../lib/types/chart';
 
+type ChartMode = 'birth' | 'navamsa' | 'transit';
+type ChartPoint = { name: string; sign: string; house: number; degree?: number; retrograde?: boolean };
+
+const SIGNS = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+const HOUSE_CENTERS: Record<number, [number, number]> = {
+  1: [150, 56], 2: [75, 25], 3: [25, 75], 4: [56, 150],
+  5: [25, 225], 6: [75, 275], 7: [150, 244], 8: [225, 275],
+  9: [275, 225], 10: [244, 150], 11: [275, 75], 12: [225, 25],
+};
+
+function NorthIndianChart({ title, ascendantSign, points }: { title: string; ascendantSign: string; points: ChartPoint[] }) {
+  const ascIndex = Math.max(0, SIGNS.indexOf(ascendantSign));
+  const groups = Array.from({ length: 12 }, (_, i) => ({ house: i + 1, sign: SIGNS[(ascIndex + i) % 12], planets: points.filter((p) => p.house === i + 1) }));
+  return <div className="rounded-2xl border border-white/10 bg-[#f8f1df] p-3 text-[#6f3825]">
+    <h3 className="mb-2 text-center text-sm font-semibold text-[#6f3825]">{title}</h3>
+    <div className="mx-auto max-w-[420px]">
+      <svg viewBox="0 0 300 300" role="img" aria-label={`${title} North Indian chart`} className="w-full">
+        <rect x="2" y="2" width="296" height="296" fill="#fbf6e9" stroke="#8c6048" strokeWidth="2" />
+        <path d="M2 2L298 298M298 2L2 298M150 2L298 150L150 298L2 150Z" fill="none" stroke="#8c6048" strokeWidth="1.5" />
+        {groups.map(({ house, sign, planets }) => {
+          const [x, y] = HOUSE_CENTERS[house];
+          return <g key={house} textAnchor="middle" fontFamily="Arial, sans-serif">
+            <text x={x} y={y - 13} fontSize="9" fill="#a14e35">{house}{house === 1 ? ' · Lagna' : ' · House'}</text>
+            <text x={x} y={y} fontSize="10" fontWeight="bold">{sign}</text>
+            <text x={x} y={y + 13} fontSize="9" fill="#334c9b">{planets.map((p) => p.name).join(', ') || '—'}</text>
+          </g>;
+        })}
+      </svg>
+    </div>
+    <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px] text-[#745541]">
+      {points.map((p) => <span key={`${p.name}-${p.house}`}>{p.name}: {p.sign}{p.degree !== undefined ? ` ${p.degree.toFixed(1)}°` : ''}{p.retrograde ? ' ℞' : ''}</span>)}
+    </div>
+  </div>;
+}
+
+function navamsaSign(longitude: number): string {
+  return SIGNS[Math.floor((((longitude % 360) + 360) % 360 * 9) % 360 / 30)];
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function ordinal(n: number): string {
@@ -307,10 +346,22 @@ export function PlanetDashboard() {
   const [chartResponse, setChartResponse] = useState<ChartResponse | null>(null);
   const [selectedPlanet, setSelectedPlanet] = useState<PlanetInfo | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [chartMode, setChartMode] = useState<ChartMode>('birth');
+  const [transitPlanets, setTransitPlanets] = useState<ChartPoint[] | null>(null);
+  const [transitError, setTransitError] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setChartResponse(loadChartResponse());
+    const savedChart = loadChartResponse();
+    setChartResponse(savedChart);
+    fetch('/api/transits').then(async (response) => {
+      if (!response.ok) throw new Error('Transit request failed');
+      const data = await response.json();
+      setTransitPlanets(data.planets.map((p: { name: string; sign: string; longitude: number; retrograde: boolean }) => ({
+        name: p.name, sign: p.sign, degree: p.longitude % 30, longitude: p.longitude, retrograde: p.retrograde,
+        house: ((SIGNS.indexOf(p.sign) - SIGNS.indexOf(savedChart?.ascendant.sign ?? 'Aries') + 12) % 12) + 1,
+      })));
+    }).catch(() => setTransitError(true));
   }, []);
 
   const closeModal = useCallback(() => setSelectedPlanet(null), []);
@@ -359,6 +410,19 @@ export function PlanetDashboard() {
           </p>
         )}
       </motion.div>
+
+      <section className="mb-8 rounded-[24px] border border-white/5 bg-surface p-5 shadow-premium-card">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="text-lg font-semibold text-white">Your Vedic Charts</h2><p className="text-xs text-white/45">North Indian format · whole sign houses</p></div>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Chart type">
+            {([{ id: 'birth', label: 'Birth (D1)' }, { id: 'navamsa', label: 'Navamsa (D9)' }, { id: 'transit', label: 'Transit' }] as const).map((tab) => <button key={tab.id} role="tab" aria-selected={chartMode === tab.id} onClick={() => setChartMode(tab.id)} className={`rounded-full border px-4 py-2 text-xs transition ${chartMode === tab.id ? 'border-gold/50 bg-gold/10 text-gold' : 'border-white/10 text-white/55 hover:text-white'}`}>{tab.label}</button>)}
+          </div>
+        </div>
+        {chartMode === 'birth' && chartResponse && <NorthIndianChart title="Rashi · Birth Chart (D1)" ascendantSign={chartResponse.ascendant.sign} points={chartResponse.planets.map((p) => ({ name: p.name, sign: p.sign, house: p.house, degree: p.degree, retrograde: p.retrograde }))} />}
+        {chartMode === 'navamsa' && chartResponse && <NorthIndianChart title="Navamsa Chart (D9)" ascendantSign={navamsaSign(chartResponse.ascendant.longitude)} points={chartResponse.planets.map((p) => { const longitude = (p.longitude * 9) % 360; const sign = navamsaSign(p.longitude); const house = ((SIGNS.indexOf(sign) - SIGNS.indexOf(navamsaSign(chartResponse.ascendant.longitude)) + 12) % 12) + 1; return { name: p.name, sign, house, degree: longitude % 30, retrograde: p.retrograde }; })} />}
+        {chartMode === 'transit' && transitPlanets && <NorthIndianChart title="Current Sidereal Transits · Houses from your Ascendant" ascendantSign={chartResponse?.ascendant.sign ?? 'Aries'} points={transitPlanets} />}
+        {chartMode === 'transit' && !transitPlanets && <p className="rounded-xl bg-white/5 p-4 text-sm text-white/60">{transitError ? 'Transit positions could not be loaded. Please try again shortly.' : 'Loading current transit positions…'}</p>}
+      </section>
 
       {/* ── Planet Grid ── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

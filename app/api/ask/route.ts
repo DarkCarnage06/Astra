@@ -47,6 +47,11 @@ function classifyIntent(message: string): string {
   return 'general';
 }
 
+function isAstrologyQuestion(message: string): boolean {
+  if (/\b(code|coding|program(?:ming)?|fibonacci|recipe|translate|summari[sz]e this|write an essay|general trivia|solve this equation)\b/i.test(message)) return false;
+  return /\b(astrolog(?:y|ical)|birth chart|natal|transit|kundli|kundali|horoscope|zodiac|planet|rashi|nakshatra|dasha|yoga|panchang|lagna|ascendant|career|job|work|love|marriage|relationship|partner|money|wealth|finance|study|exam|health|life path|timing|family|home|children|purpose|compatibility)\b/i.test(message);
+}
+
 function getTemplateContent(category: string): string {
   return PROMPT_TEMPLATES[category as keyof typeof PROMPT_TEMPLATES] || '';
 }
@@ -244,12 +249,48 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!message || !birth || !chart) {
+  if (!message) {
     console.error('[ASK ASTRA] STEP 3 FAILED — validation: missing message, birth, or chart');
     return NextResponse.json(
       { error: 'invalid_request', message: 'Message, birth details and birth chart are required.' },
       { status: 400 }
     );
+  }
+
+  // A deterministic server-side gate keeps Ask Astra in its astrology domain.
+  if (!isAstrologyQuestion(message)) {
+    return NextResponse.json({
+      content: 'I am Astra, your personal astrology guide. I can help with questions about your birth chart, planetary timing, and how these relate to your life. What would you like to explore?',
+      sessionId,
+      category: 'out_of_scope',
+    });
+  }
+
+  // Never trust chart data supplied by the browser for a personalized reading.
+  try {
+    const user = await db.user.findUnique({
+      where: { clerkId },
+      include: { birthDetail: true, birthChart: true },
+    });
+    if (user?.birthDetail && user.birthChart) {
+      birth = {
+        name: user.birthDetail.name,
+        date: user.birthDetail.date,
+        time: user.birthDetail.time ?? '',
+        knownTime: user.birthDetail.knownTime,
+        place: user.birthDetail.place,
+        displayPlace: user.birthDetail.displayPlace ?? undefined,
+        latitude: user.birthDetail.latitude ?? undefined,
+        longitude: user.birthDetail.longitude ?? undefined,
+        timezone: user.birthDetail.timezone ?? undefined,
+      };
+      chart = user.birthChart.chartJson;
+    }
+  } catch (err) {
+    console.error('[ASK ASTRA] Could not load saved chart:', err);
+  }
+  if (!birth || !chart) {
+    return NextResponse.json({ error: 'chart_not_found', message: 'Please save your birth details and generate your chart before asking for a personalized reading.' }, { status: 400 });
   }
 
   // ── STEP 4: BUILD PROMPT ──
@@ -259,7 +300,7 @@ export async function POST(request: NextRequest) {
 
   try {
     category = classifyIntent(message);
-    const systemBase = getTemplateContent('system');
+    const systemBase = getTemplateContent('system') + '\n\nYou must answer only astrology-related questions, grounded exclusively in the supplied saved birth chart and current transit context. Do not answer unrelated requests, provide code, solve general math, or invent missing chart facts. If a requested detail is absent, say so clearly.';
     const topicPrompt = getTemplateContent(category);
     finalSystemPrompt = `${systemBase}\n\n${topicPrompt}`.trim();
 
