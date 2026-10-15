@@ -68,7 +68,11 @@ import { ToastContainer } from '../components/toast/toast-container';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignOutUrl="/"
+    >
       <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <body>
           {/* Skip to main content — keyboard accessibility */}
