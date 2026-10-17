@@ -339,10 +339,30 @@ export function BillingPlans({ currentPlan = 'FREE' }: { currentPlan?: string })
         <h2 className="mb-6 font-display text-2xl font-bold text-white">Available Plans</h2>
         
         {!PAYMENTS_ENABLED && (
-          <div className="mb-8 rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-5 text-[#D4AF37]">
-            <p className="text-sm font-medium leading-relaxed">
-              Premium memberships are coming soon. During our early launch, every feature is available free for all users.
-            </p>
+          <div className="mb-8 relative overflow-hidden rounded-[24px] border border-[#D4AF37]/30 bg-gradient-to-r from-[#D4AF37]/10 via-[#D4AF37]/5 to-transparent p-6 shadow-premium-card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37]">
+                  <Sparkles size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-display text-base font-bold text-white">Initial Launch Special · 100% Free Access</h3>
+                    <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400 border border-emerald-500/30">
+                      Active
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-[#B8BCC8] leading-relaxed">
+                    All astrological features, Kundli compatibility, Yogas, Remedies, Dasha timeline, and AI chat are completely free for everyone. Premium membership tiers are currently in development and coming soon.
+                  </p>
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3.5 py-1.5 text-xs font-semibold text-[#D4AF37]">
+                  <span>✦</span> Premium Coming Soon
+                </span>
+              </div>
+            </div>
           </div>
         )}
 

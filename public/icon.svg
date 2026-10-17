@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="128" fill="#05060A"/>
+  <circle cx="256" cy="256" r="220" stroke="#D4AF37" stroke-width="2" stroke-opacity="0.25"/>
+  <circle cx="256" cy="256" r="160" stroke="#D4AF37" stroke-width="1.5" stroke-opacity="0.2" stroke-dasharray="6 6"/>
+  <!-- Central Golden Star -->
+  <path d="M256 64 L276 216 L428 236 L306 286 L366 428 L256 336 L146 428 L206 286 L84 236 L236 216 Z" fill="url(#astraGold)" filter="url(#glow)"/>
+  <circle cx="256" cy="256" r="28" fill="#FFFFFF" fill-opacity="0.95"/>
+  <defs>
+    <linearGradient id="astraGold" x1="84" y1="64" x2="428" y2="428" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FCEEAC"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#AA820A"/>
+    </linearGradient>
+    <filter id="glow" x="40" y="20" width="432" height="452" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="16" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+</svg>

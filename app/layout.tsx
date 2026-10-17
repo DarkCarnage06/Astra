@@ -16,9 +16,15 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const viewport: Viewport = {
-  themeColor: '#D4AF37',
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#05060A' },
+    { media: '(prefers-color-scheme: light)', color: '#05060A' },
+  ],
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
 };
 
 export const metadata: Metadata = {
@@ -54,10 +60,24 @@ export const metadata: Metadata = {
     creator: '@astra_app',
   },
   icons: {
-    icon: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
+    icon: '/icon.svg',
+    apple: '/icon.svg',
   },
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'ASTRA',
+  },
+  formatDetection: {
+    telephone: false,
+    date: false,
+    address: false,
+    email: false,
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
   robots: {
     index: true,
     follow: true,

@@ -195,7 +195,7 @@ export function Navbar() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.28, duration: 0.35 }}
-                className="flex flex-col gap-3 border-t border-white/5 px-6 py-6"
+                className="flex flex-col gap-3 border-t border-white/5 px-6 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
               >
                 <Link
                   href="/sign-in"

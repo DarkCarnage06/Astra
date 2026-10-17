@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { PAYMENTS_ENABLED } from '../../config/payments';
 
 interface PremiumLockProps {
   children: React.ReactNode;
@@ -11,6 +12,11 @@ interface PremiumLockProps {
 }
 
 export default function PremiumLock({ children, requiredPlan }: PremiumLockProps) {
+  // During launch, all features are 100% free for everyone!
+  if (!PAYMENTS_ENABLED) {
+    return <>{children}</>;
+  }
+
   const [userPlan, setUserPlan] = useState<'FREE' | 'PRO' | 'PREMIUM' | null>(null);
   const [loading, setLoading] = useState(true);
 

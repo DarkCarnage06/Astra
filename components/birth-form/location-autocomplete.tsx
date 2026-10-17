@@ -51,9 +51,9 @@ interface LocationAutocompleteProps {
 }
 
 const inputClass =
-  'w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-5 py-4 text-white placeholder-white/50 outline-none backdrop-blur-xl transition-all duration-200 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#D4AF37]/30 hover:border-white/20 text-sm';
+  'w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-5 py-4 text-white placeholder-white/50 outline-none backdrop-blur-xl transition-all duration-200 focus:border-[#D4AF37]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#D4AF37]/30 hover:border-white/20 text-base sm:text-sm';
 const inputErrorClass =
-  'w-full rounded-2xl border border-red-400/40 bg-white/5 pl-10 pr-5 py-4 text-white placeholder-white/50 outline-none backdrop-blur-xl transition-all duration-200 focus:border-red-400/60 focus:ring-1 focus:ring-red-400/30 text-sm';
+  'w-full rounded-2xl border border-red-400/40 bg-white/5 pl-10 pr-5 py-4 text-white placeholder-white/50 outline-none backdrop-blur-xl transition-all duration-200 focus:border-red-400/60 focus:ring-1 focus:ring-red-400/30 text-base sm:text-sm';
 
 export function LocationAutocomplete({ onLocationSelect, onInputChange, error, disabled }: LocationAutocompleteProps) {
   const [query, setQuery] = useState('');
@@ -66,15 +66,19 @@ export function LocationAutocomplete({ onLocationSelect, onInputChange, error, d
   const [hasSelected, setHasSelected] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Handle clicking outside
+  // Handle clicking outside (mouse and touch devices)
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   // Handle debounced search

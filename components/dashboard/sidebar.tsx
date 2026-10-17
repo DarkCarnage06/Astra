@@ -18,13 +18,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useClerk, useUser } from '@clerk/nextjs';
 
 // ---------------------------------------------------------------------------
 // Nav items
 // ---------------------------------------------------------------------------
-const NAV_ITEMS = [
+export const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/ask-astra', label: 'Ask Astra', icon: MessageSquare },
   { href: '/dashboard/panchang', label: 'Today\'s Panchang', icon: Calendar },
@@ -33,6 +33,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/chart', label: 'Birth Chart', icon: Star },
   { href: '/dashboard/timeline', label: 'Timeline', icon: Clock },
   { href: '/dashboard/compatibility', label: 'Compatibility', icon: Heart },
+  { href: '/dashboard/billing', label: 'Billing & Plans', icon: Crown },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ] as const;
 
@@ -44,24 +45,6 @@ export function DashboardSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const { signOut } = useClerk();
   const { user } = useUser();
-  const [userPlan, setUserPlan] = useState<'FREE' | 'PRO' | 'PREMIUM' | null>(null);
-
-  useEffect(() => {
-    const fetchPlan = async () => {
-      try {
-        const res = await fetch('/api/payment/history');
-        if (res.ok) {
-          const data = await res.json();
-          setUserPlan(data.plan);
-        }
-      } catch (err) {
-        console.error('Failed to load user plan for sidebar:', err);
-      }
-    };
-    if (user) {
-      fetchPlan();
-    }
-  }, [user]);
 
   return (
     <motion.aside
@@ -129,29 +112,32 @@ export function DashboardSidebar() {
         })}
       </nav>
 
-      {/* Upgrade banner */}
+      {/* Launch / Coming Soon banner */}
       <AnimatePresence>
-        {!collapsed && userPlan !== 'PRO' && userPlan !== 'PREMIUM' && (
+        {!collapsed && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="mx-3 mb-4 overflow-hidden rounded-[16px] border border-gold/10 bg-gradient-to-b from-gold/5 to-transparent p-4 relative"
+            className="mx-3 mb-4 overflow-hidden rounded-[16px] border border-gold/20 bg-gradient-to-b from-gold/10 to-transparent p-4 relative"
           >
             <div className="absolute top-0 right-0 w-16 h-16 bg-gold/10 blur-2xl rounded-full" />
             <div className="relative z-10">
               <div className="mb-2 flex items-center gap-2">
-                <Crown size={14} className="text-gold" />
-                <p className="text-xs font-semibold text-gold tracking-wide uppercase">Go Premium</p>
+                <Sparkles size={14} className="text-gold" />
+                <p className="text-xs font-semibold text-gold tracking-wide uppercase">Launch Special</p>
               </div>
-              <p className="mb-4 text-[11px] leading-relaxed text-secondary/80">
-                Unlock deeper layers of your chart and relationships.
+              <p className="mb-3 text-[11px] leading-relaxed text-secondary/90">
+                All features are 100% free for everyone. Premium memberships coming soon.
               </p>
               <Link
                 href="/dashboard/billing"
-                className="block rounded-lg bg-surface border border-gold/20 py-2 text-center text-xs font-semibold text-gold transition hover:bg-gold hover:text-black hover:border-gold"
+                className="flex items-center justify-between rounded-lg bg-surface border border-gold/20 px-3 py-2 text-xs font-semibold text-gold transition hover:bg-gold hover:text-black hover:border-gold"
               >
-                Upgrade Now
+                <span>Free Launch Access</span>
+                <span className="text-[10px] font-bold uppercase rounded bg-gold/20 px-1.5 py-0.5 text-gold">
+                  Soon
+                </span>
               </Link>
             </div>
           </motion.div>

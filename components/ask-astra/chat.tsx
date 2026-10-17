@@ -7,6 +7,7 @@ import { Send, Sparkles, AlertCircle, Bot, User, Trash2, ArrowRight, Copy, Share
 import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
 import { toast } from '../../lib/toast';
 import { Markdown } from '../ui/markdown';
+import { PAYMENTS_ENABLED } from '../../config/payments';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -85,13 +86,16 @@ export function AskAstraChat() {
   }, []);
 
   useEffect(() => {
-    const userMsgCount = messages.filter((m) => m.role === 'user').length;
-    if (userPlan === 'FREE' && userMsgCount >= 5) {
-      setIsLocked(true);
-      setError("You've used your free questions. Upgrade to ASTRA PRO to continue.");
-    } else {
-      setIsLocked(false);
+    // In free launch mode, all chat queries are 100% free and unlimited
+    if (PAYMENTS_ENABLED && userPlan === 'FREE') {
+      const userMsgCount = messages.filter((m) => m.role === 'user').length;
+      if (userMsgCount >= 5) {
+        setIsLocked(true);
+        setError("You've used your free questions. Upgrade to ASTRA PRO to continue.");
+        return;
+      }
     }
+    setIsLocked(false);
   }, [messages, userPlan]);
 
   useEffect(() => {
@@ -234,7 +238,7 @@ export function AskAstraChat() {
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-12rem)] max-w-4xl flex-col rounded-[24px] border border-white/5 bg-surface shadow-premium-card relative overflow-hidden">
+    <div className="mx-auto flex h-[calc(100dvh-8.5rem)] sm:h-[calc(100vh-12rem)] max-w-4xl flex-col rounded-[24px] border border-white/5 bg-surface shadow-premium-card relative overflow-hidden">
       <div className="absolute inset-0 bg-premium-gradient opacity-30 pointer-events-none" />
       {/* Header */}
       <div className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-5">
@@ -416,7 +420,7 @@ export function AskAstraChat() {
           e.preventDefault();
           handleSend(input);
         }}
-        className="relative z-10 flex items-center gap-3 border-t border-white/5 bg-background/50 p-4 backdrop-blur-xl"
+        className="relative z-10 flex items-center gap-3 border-t border-white/5 bg-background/50 p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl"
       >
         <div className="relative flex-1 group">
           <input
@@ -424,13 +428,13 @@ export function AskAstraChat() {
             disabled={isLocked || loading}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isLocked ? "Chat locked. Please upgrade to continue." : "Ask Astra about your chart..."}
-            className="w-full rounded-[16px] border border-white/10 bg-surface px-5 py-4 text-[14px] text-text placeholder-secondary/50 outline-none transition-all focus:border-gold/30 focus:bg-surface-hover focus:shadow-[0_0_20px_rgba(212,175,55,0.05)] disabled:opacity-50"
+            className="w-full rounded-[16px] border border-white/10 bg-surface px-4 sm:px-5 py-3.5 sm:py-4 text-base sm:text-sm text-text placeholder-secondary/50 outline-none transition-all focus:border-gold/30 focus:bg-surface-hover focus:shadow-[0_0_20px_rgba(212,175,55,0.05)] disabled:opacity-50"
           />
         </div>
         <button
           type="submit"
           disabled={!input.trim() || loading || isLocked}
-          className="flex h-[54px] w-[54px] flex-shrink-0 items-center justify-center rounded-[16px] bg-gold text-black shadow-goldGlow transition-all hover:bg-gold-muted hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:shadow-none disabled:hover:scale-100"
+          className="flex h-[48px] w-[48px] sm:h-[54px] sm:w-[54px] flex-shrink-0 items-center justify-center rounded-[16px] bg-gold text-black shadow-goldGlow transition-all hover:bg-gold-muted hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:shadow-none disabled:hover:scale-100"
         >
           <Send size={18} />
         </button>
