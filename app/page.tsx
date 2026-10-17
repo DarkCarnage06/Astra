@@ -18,8 +18,11 @@ export default function Home() {
 
   useEffect(() => {
     const seen = sessionStorage.getItem('astra_loaded');
-    if (!seen) {
+    const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
+    if (!seen && !isSmallScreen) {
       setShowLoader(true);
+    } else if (!seen) {
+      sessionStorage.setItem('astra_loaded', '1');
     }
   }, []);
 

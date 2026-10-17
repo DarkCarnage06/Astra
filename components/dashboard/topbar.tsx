@@ -23,14 +23,14 @@ export function DashboardTopbar({ onOpenMobile }: { onOpenMobile?: () => void })
   const title = PAGE_TITLES[pathname] ?? 'Dashboard';
 
   return (
-    <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-white/10 bg-[#05060A]/80 px-4 sm:px-6 backdrop-blur-xl">
+    <header className="flex h-[calc(4rem+env(safe-area-inset-top,0px))] flex-shrink-0 items-center justify-between border-b border-white/10 bg-[#080a11] px-3 pt-[env(safe-area-inset-top,0px)] sm:px-6 md:bg-[#05060A]/90 md:backdrop-blur-xl">
       {/* Left: Mobile hamburger + Page title */}
       <div className="flex items-center gap-3">
         {onOpenMobile && (
           <button
             type="button"
             onClick={onOpenMobile}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-secondary hover:text-white hover:bg-white/10 transition md:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-secondary transition hover:text-white hover:bg-white/10 md:hidden"
             aria-label="Open navigation menu"
           >
             <Menu size={18} />
@@ -62,7 +62,7 @@ export function DashboardTopbar({ onOpenMobile }: { onOpenMobile?: () => void })
 
         {/* Notifications placeholder */}
         <button
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[#B8BCC8] transition hover:text-white"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[#B8BCC8] transition hover:text-white md:h-9 md:w-9"
           title="Notifications"
         >
           <Bell size={14} />

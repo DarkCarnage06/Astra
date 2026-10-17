@@ -73,14 +73,14 @@ const StatCard = memo(function StatCard({ label, value, sub, color }: { label: s
       whileHover={{ y: -4, scale: 1.01 }}
       transition={{ duration: 0.25 }}
       style={{ willChange: 'transform' }}
-      className="flex flex-col gap-1 rounded-[20px] border border-white/5 bg-surface p-6 shadow-premium-card relative overflow-hidden group"
+      className="group relative flex min-w-0 flex-col gap-1 overflow-hidden rounded-2xl border border-white/5 bg-surface p-4 shadow-premium-card sm:rounded-[20px] sm:p-6"
     >
       <div className="absolute top-0 right-0 p-4 opacity-10 transition-opacity group-hover:opacity-20" style={{ color }}>
         <Star size={64} className="blur-xl" />
       </div>
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] relative z-10" style={{ color }}>{label}</p>
-      <p className="font-display text-3xl font-medium text-text mt-2 relative z-10">{value}</p>
-      <p className="text-xs text-secondary mt-1 relative z-10">{sub}</p>
+      <p className="relative z-10 mt-1 truncate font-display text-[clamp(1.15rem,6vw,1.875rem)] font-medium text-text sm:mt-2">{value}</p>
+      <p className="relative z-10 mt-1 truncate text-[11px] text-secondary sm:text-xs">{sub}</p>
     </motion.div>
   );
 });
@@ -356,10 +356,10 @@ export function Dashboard() {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div className="mx-auto max-w-7xl px-6 pb-24 pt-8 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pb-8 pt-5 sm:px-6 sm:pt-8 lg:px-8">
 
       {/* ---- Header ---- */}
-      <motion.div {...fadeUp(0)} className="mb-8 relative rounded-[24px] border border-white/5 bg-surface p-8 shadow-premium-card overflow-hidden">
+      <motion.div {...fadeUp(0)} className="relative mb-6 overflow-hidden rounded-2xl border border-white/5 bg-surface p-5 shadow-premium-card sm:mb-8 sm:rounded-[24px] sm:p-8">
         <div className="absolute inset-0 bg-premium-gradient opacity-50 pointer-events-none" />
         <div className="relative z-10 flex flex-col items-start md:flex-row md:items-end justify-between gap-6">
           <div>
@@ -390,7 +390,7 @@ export function Dashboard() {
       </motion.div>
 
       {/* ---- Stat row ---- */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Sun Sign" value={chart.sunSign} sub={`${THEME.elementMap[chart.sunSign] ?? ''} Sign`} color={THEME.signColors[chart.sunSign] ?? THEME.colors.gold} />
         <StatCard label="Moon Sign" value={chart.moonSign} sub={`${chart.nakshatra.name} Nakshatra`} color={THEME.signColors[chart.moonSign] ?? THEME.colors.blue} />
         <StatCard label="Ascendant" value={chart.ascendant.sign} sub={`${chart.ascendant.degree.toFixed(1)}° Rising`} color={THEME.colors.gold} />

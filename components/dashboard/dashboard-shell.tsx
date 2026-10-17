@@ -34,7 +34,7 @@ export function DashboardShell({ children, contentClassName }: DashboardShellPro
       <div className="relative flex flex-1 flex-col overflow-hidden min-w-0">
         <DashboardTopbar onOpenMobile={() => setMobileOpen(true)} />
         <main
-          className={`flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom,0px)] ${
+          className={`flex-1 overflow-y-auto overscroll-contain pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-[env(safe-area-inset-bottom,0px)] ${
             contentClassName ?? ''
           }`}
         >

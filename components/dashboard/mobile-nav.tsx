@@ -44,7 +44,7 @@ export function DashboardMobileNav({ isOpen, onClose }: DashboardMobileNavProps)
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md md:hidden"
+            className="fixed inset-0 z-50 bg-black/75 md:hidden"
             aria-hidden="true"
           />
 
@@ -54,7 +54,7 @@ export function DashboardMobileNav({ isOpen, onClose }: DashboardMobileNavProps)
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className="fixed inset-y-0 left-0 z-50 flex w-[300px] max-w-[85vw] flex-col border-r border-white/10 bg-[#07090F] shadow-2xl backdrop-blur-2xl md:hidden"
+            className="fixed inset-y-0 left-0 z-50 flex w-[300px] max-w-[85vw] flex-col border-r border-white/10 bg-[#080a11] shadow-2xl md:hidden"
             role="dialog"
             aria-modal="true"
             aria-label="Mobile Navigation Menu"
@@ -88,7 +88,7 @@ export function DashboardMobileNav({ isOpen, onClose }: DashboardMobileNavProps)
                     key={href}
                     href={href}
                     onClick={onClose}
-                    className={`flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+                    className={`flex min-h-12 items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
                       active
                         ? 'bg-gold/10 text-gold border border-gold/20'
                         : 'text-secondary hover:bg-white/5 hover:text-text'
