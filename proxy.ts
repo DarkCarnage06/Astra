@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
 
 const isPublicRoute = createRouteMatcher([
   '/',
@@ -10,8 +11,11 @@ const isPublicRoute = createRouteMatcher([
   '/api/payment/webhook(.*)',
   '/robots.txt',
   '/sitemap.xml',
+  '/manifest.json',
+  '/auth-unavailable',
 ]);
 
+const isSignInRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)']);
 /**
  * Clerk middleware for Next.js 16 (proxy.ts).
  *
@@ -22,7 +26,7 @@ const isPublicRoute = createRouteMatcher([
  * Do NOT set a separate Content-Security-Policy in next.config — browsers enforce
  * every CSP header, so a second incomplete policy would still block Clerk UI.
  */
-export default clerkMiddleware(
+const clerkProxy = clerkMiddleware(
   async (auth, request) => {
     if (!isPublicRoute(request)) {
       await auth.protect();
@@ -65,6 +69,18 @@ export default clerkMiddleware(
     },
   },
 );
+
+export default function proxy(request: NextRequest, event: NextFetchEvent) {
+  if (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY) {
+    return clerkProxy(request, event);
+  }
+
+  if (isPublicRoute(request) && !isSignInRoute(request)) return NextResponse.next();
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    return NextResponse.json({ error: 'auth_unavailable', message: 'Sign-in is currently unavailable.' }, { status: 503 });
+  }
+  return NextResponse.redirect(new URL('/auth-unavailable', request.url));
+}
 
 export const config = {
   matcher: [

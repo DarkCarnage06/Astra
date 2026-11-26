@@ -9,9 +9,10 @@ import { DashboardMobileNav } from './mobile-nav';
 interface DashboardShellProps {
   children: React.ReactNode;
   contentClassName?: string;
+  fixedContent?: boolean;
 }
 
-export function DashboardShell({ children, contentClassName }: DashboardShellProps) {
+export function DashboardShell({ children, contentClassName, fixedContent }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
@@ -34,7 +35,8 @@ export function DashboardShell({ children, contentClassName }: DashboardShellPro
       <div className="relative flex flex-1 flex-col overflow-hidden min-w-0">
         <DashboardTopbar onOpenMobile={() => setMobileOpen(true)} />
         <main
-          className={`flex-1 overflow-y-auto overscroll-contain pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-[env(safe-area-inset-bottom,0px)] ${
+          id="main-content"
+          className={`min-h-0 flex-1 ${fixedContent ? 'overflow-hidden' : 'overflow-y-auto overscroll-contain pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-[env(safe-area-inset-bottom,0px)]'} ${
             contentClassName ?? ''
           }`}
         >

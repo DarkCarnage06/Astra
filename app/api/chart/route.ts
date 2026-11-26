@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../lib/db';
 import type { BirthDetails, ChartRequest, ChartResponse } from '../../../lib/types/chart';
-import { verifyServerEnv } from '../../../lib/api';
+import { apiUrl, verifyServerEnv } from '../../../lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,16 +78,10 @@ export async function POST(req: NextRequest) {
       timezone: birthDetails.timezone,
     };
 
-    const rawBase = process.env.NEXT_PUBLIC_API_URL ?? '';
-    if (!rawBase || rawBase.includes('localhost') || rawBase.includes('127.0.0.1')) {
-      throw new Error(
-        `CRITICAL: NEXT_PUBLIC_API_URL is not configured correctly for production. ` +
-        `Current value: "${rawBase}". ` +
-        `Set it to https://astra-backend-m33g.onrender.com in Vercel environment variables.`
-      );
+    if (!process.env.NEXT_PUBLIC_API_URL) {
+      return NextResponse.json({ error: 'configuration_error', message: 'The chart service is unavailable.' }, { status: 503 });
     }
-    const FASTAPI_BASE = rawBase.replace(/\/+$/, '');
-    const requestUrl = `${FASTAPI_BASE}/api/chart`;
+    const requestUrl = apiUrl('/api/chart');
 
     console.log(`[API /api/chart POST] Request URL: ${requestUrl}`);
     console.log(`[API /api/chart POST] Request Body:`, JSON.stringify(chartRequest));

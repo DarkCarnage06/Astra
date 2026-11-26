@@ -1,444 +1,275 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, AlertCircle, Bot, User, Trash2, ArrowRight, Copy, Share2, RotateCcw } from 'lucide-react';
-import { loadBirthDetails, loadChartResponse } from '../../lib/storage';
+import { ArrowRight, ArrowUp, ArrowUpRight, Copy, Eclipse, Plus, RotateCcw, Share2, Sparkles } from 'lucide-react';
 import { toast } from '../../lib/toast';
 import { Markdown } from '../ui/markdown';
-import { PAYMENTS_ENABLED } from '../../config/payments';
+import styles from '../../app/astra.module.css';
 
 interface Message {
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp?: string;
 }
 
 const SUGGESTIONS = [
-  { text: 'Where is my career heading right now and what moves should I make?', category: 'career' },
-  { text: 'What does my timing look like for love and serious relationships?', category: 'relationship' },
-  { text: 'What is my strongest path to financial abundance and growth?', category: 'finance' },
-  { text: "How is today's cosmic energy and Panchang looking for my decisions?", category: 'general' },
+  'What themes stand out in my career?',
+  'What patterns show up in my relationships?',
+  'What does my current Dasha highlight?',
+  'What can I learn from my Moon sign?',
 ];
+
+const DISMISSED_SESSION = 'astra:dismissed_chat';
 
 export function AskAstraChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'failed'>('loading');
+  const [sending, setSending] = useState(false);
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  const [error, setError] = useState<{ text: string; code?: string } | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [userPlan, setUserPlan] = useState<'FREE' | 'PRO' | 'PREMIUM'>('FREE');
-  const [isLocked, setIsLocked] = useState(false);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const transcript = useRef<HTMLDivElement>(null);
+  const editor = useRef<HTMLTextAreaElement>(null);
+  const requestInFlight = useRef(false);
+  const locked = error?.code === 'limit_reached';
 
   useEffect(() => {
-    const fetchHistory = async () => {
+    const controller = new AbortController();
+    async function loadConversation() {
       try {
-        const url = '/api/ask';
-        console.log(`[Chat History] Requesting: ${url}`);
-        const res = await fetch(url);
-        console.log(`[Chat History] Response status: ${res.status}`);
-        const text = await res.text();
-        console.log(`[Chat History] Response body:`, text);
-
+        const res = await fetch('/api/ask', { signal: controller.signal, cache: 'no-store' });
+        const data = await res.json();
         if (!res.ok) {
-          throw new Error(`Failed to load chat history: status ${res.status} ${text}`);
+          setError({ text: res.status === 401 ? 'Sign in to open your conversation.' : 'Your conversation could not be loaded.', code: res.status === 401 ? 'unauthorized' : undefined });
+          setStatus('failed');
+          return;
         }
 
-        const data = JSON.parse(text);
-        if (data.messages && data.messages.length > 0) {
-          const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          setMessages(
-            data.messages.map((m: { role: 'user' | 'assistant'; content: string; timestamp?: string }) => ({
-              role: m.role,
-              content: m.content,
-              timestamp: m.timestamp || timestamp,
-            }))
-          );
-          setSessionId(data.sessionId);
+        let dismissed: string | null = null;
+        try {
+          dismissed = sessionStorage.getItem(DISMISSED_SESSION);
+        } catch {
+          // Chat still works when browser storage is unavailable.
         }
-      } catch (err) {
-        console.error('Failed to load chat history:', err);
-        toast.error('Failed to load chat history.');
-      }
-    };
-
-    const fetchPlan = async () => {
-      try {
-        const res = await fetch('/api/payment/history');
-        if (res.ok) {
-          const data = await res.json();
-          setUserPlan(data.plan);
+        const restore = data.sessionId && data.sessionId !== dismissed;
+        setMessages(restore ? data.messages : []);
+        setSessionId(restore ? data.sessionId : null);
+        setStatus(data.hasChart ? 'ready' : 'missing');
+      } catch {
+        if (!controller.signal.aborted) {
+          setError({ text: 'Your conversation could not be loaded. Check your connection and try again.' });
+          setStatus('failed');
         }
-      } catch (err) {
-        console.error('Failed to fetch user plan details:', err);
-      }
-    };
-
-    fetchHistory();
-    fetchPlan();
-  }, []);
-
-  useEffect(() => {
-    // In free launch mode, all chat queries are 100% free and unlimited
-    if (PAYMENTS_ENABLED && userPlan === 'FREE') {
-      const userMsgCount = messages.filter((m) => m.role === 'user').length;
-      if (userMsgCount >= 5) {
-        setIsLocked(true);
-        setError("You've used your free questions. Upgrade to ASTRA PRO to continue.");
-        return;
       }
     }
-    setIsLocked(false);
-  }, [messages, userPlan]);
+    void loadConversation();
+    return () => controller.abort();
+  }, [loadAttempt]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading]);
+    if (transcript.current && (messages.length || pendingQuestion)) {
+      transcript.current.scrollTop = transcript.current.scrollHeight;
+    }
+  }, [messages, pendingQuestion, sending]);
 
-  const handleSend = async (textToSend: string) => {
-    console.log('[Frontend] Submit fired. Message:', textToSend);
-    if (!textToSend.trim() || loading) return;
-
+  function reload() {
+    setStatus('loading');
     setError(null);
-    const userMsg = textToSend.trim();
-    setInput('');
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setMessages((prev) => [...prev, { role: 'user', content: userMsg, timestamp }]);
-    setLoading(true);
+    setLoadAttempt((count) => count + 1);
+  }
+
+  async function send(question: string, replaceReplyId?: string) {
+    const message = question.trim();
+    if (status !== 'ready' || requestInFlight.current || (locked && !replaceReplyId) || (!message && !replaceReplyId)) return;
+
+    requestInFlight.current = true;
+    setError(null);
+    setSending(true);
+    if (!replaceReplyId) setPendingQuestion(message);
 
     try {
-      const birth = loadBirthDetails();
-      const chart = loadChartResponse();
-
-      if (!birth || !chart) {
-        console.error('[Frontend] Validation failed: Missing birth or chart data.');
-        setError('Please generate your birth chart first before chatting with Astra.');
-        setLoading(false);
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, sessionId, replaceReplyId }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || typeof data?.reply?.content !== 'string') {
+        if (!replaceReplyId) setInput(message);
+        setError({
+          text: res.status === 401 ? 'Sign in to send your question.' : data?.message ?? 'Astra could not answer right now. Please try again.',
+          code: res.status === 401 ? 'unauthorized' : data?.error,
+        });
         return;
       }
 
-      const url = '/api/ask';
-      console.log(`[Chat Query] Requesting: ${url}`);
-      
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMsg,
-          history: messages,
-          birth,
-          chart,
-          sessionId,
-        }),
-      });
-
-      console.log(`[Chat Query] Response status: ${res.status}`);
-      const text = await res.text();
-      console.log(`[Chat Query] Response body:`, text);
-
-      if (!res.ok) {
-        if (res.status === 403) {
-          setIsLocked(true);
-        }
-        let errMsg = `Server error (HTTP ${res.status})`;
-        try {
-          const errData = JSON.parse(text);
-          if (errData.message) errMsg = `[${res.status}] ${errData.message}`;
-          else if (errData.error) errMsg = `[${res.status}] ${errData.error}`;
-        } catch {
-          errMsg = `[${res.status}] ${text.slice(0, 200) || 'Unknown server error'}`;
-        }
-        throw new Error(errMsg);
+      setSessionId(data.sessionId);
+      if (replaceReplyId) {
+        setMessages((previous) => previous.map((entry) => entry.id === replaceReplyId ? data.reply : entry));
+      } else {
+        setMessages((previous) => [...previous, { role: 'user', content: message }, data.reply]);
+        setInput('');
       }
-
-      const data = JSON.parse(text);
-      console.log('[Frontend] API response parsed', data);
-      if (data.sessionId) {
-        setSessionId(data.sessionId);
-      }
-
-      const assistantTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.content, timestamp: assistantTimestamp }]);
-      console.log('[Frontend] Frontend rendered assistant message');
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'An unknown error occurred.';
-      console.error('[Frontend] Error in handleSend:', errMsg, err);
-      setError(errMsg);
+    } catch {
+      if (!replaceReplyId) setInput(message);
+      setError({ text: 'The connection was interrupted. Please try again.' });
     } finally {
-      setLoading(false);
+      requestInFlight.current = false;
+      setPendingQuestion(null);
+      setSending(false);
     }
-  };
+  }
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Response copied to clipboard!');
-  };
-
-  const handleShare = async (text: string) => {
-    if (navigator.share) {
+  function newConversation() {
+    if (requestInFlight.current) return;
+    if (sessionId) {
       try {
-        await navigator.share({
-          title: 'Astra AI Astrological Insight',
-          text: text.slice(0, 150) + '...',
-          url: window.location.href,
-        });
+        sessionStorage.setItem(DISMISSED_SESSION, sessionId);
       } catch {
-        // user cancelled or failed
+        // New conversations can start without browser storage.
       }
-    } else {
-      navigator.clipboard.writeText(text);
-      toast.success('Insight text copied to clipboard for sharing!');
     }
-  };
-
-  const handleRegenerate = async (index: number) => {
-    if (index > 0 && messages[index - 1].role === 'user') {
-      const userMsg = messages[index - 1].content;
-      // Slice history up to the user message, discarding the old AI reply
-      const truncatedHistory = messages.slice(0, index - 1);
-      setMessages(truncatedHistory);
-      await handleSend(userMsg);
-    }
-  };
-
-  const handleClear = async () => {
-    setMessages([]);
     setSessionId(null);
+    setMessages([]);
+    setInput('');
     setError(null);
-  };
+    editor.current?.focus();
+  }
 
-  const birth = typeof window !== 'undefined' ? loadBirthDetails() : null;
+  async function copy(content: string) {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success('Reply copied.');
+    } catch {
+      toast.error('Could not copy the reply. You can select and copy its text.');
+    }
+  }
 
-  if (!birth) {
-    return (
-      <div className="flex h-[70vh] flex-col items-center justify-center text-center">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/10 text-gold border border-gold/20 shadow-glow">
-          <Sparkles size={28} />
-        </div>
-        <h3 className="font-display text-2xl font-medium text-text">Generate Your Chart First</h3>
-        <p className="mt-3 max-w-sm text-sm text-secondary leading-relaxed">
-          To ask Astra personalized questions about your life, you need to calculate your sidereal birth chart first.
-        </p>
-        <Link
-          href="/birth-form"
-          className="mt-5 flex items-center gap-2 rounded-full bg-[#D4AF37] px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-[#D4AF37]/90"
-        >
-          Generate Chart
-          <ArrowRight size={14} />
-        </Link>
-      </div>
-    );
+  async function share(content: string) {
+    if (!navigator.share) {
+      await copy(content);
+      return;
+    }
+    try {
+      await navigator.share({ title: 'Ask Astra', text: content });
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        toast.error('Could not share the reply. Try copying it instead.');
+      }
+    }
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-8.5rem)] sm:h-[calc(100vh-12rem)] max-w-4xl flex-col rounded-[24px] border border-white/5 bg-surface shadow-premium-card relative overflow-hidden">
-      <div className="absolute inset-0 bg-premium-gradient opacity-30 pointer-events-none" />
-      {/* Header */}
-      <div className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-5">
-        <div className="flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 text-gold border border-gold/20 shadow-[0_0_15px_rgba(212,175,55,0.15)]">
-            <Sparkles size={18} />
+    <section className={styles.chat} aria-label="Ask Astra conversation">
+      <header className={styles.chatHeader}>
+        <h1 className={styles.brand}><Eclipse size={23} aria-hidden="true" /> Ask Astra</h1>
+        {status === 'ready' && messages.length > 0 && (
+          <button type="button" disabled={sending} onClick={newConversation}><Plus size={17} aria-hidden="true" /> New chat</button>
+        )}
+      </header>
+
+      <div ref={transcript} className={styles.transcript}>
+        {status !== 'ready' || (!messages.length && !pendingQuestion) ? (
+          <div className={styles.chatIntro}>
+            <Sparkles size={28} aria-hidden="true" />
+            <h2>{status === 'missing' ? 'Start with your chart.' : 'What’s on your mind?'}</h2>
+            {status === 'loading' && <p role="status">Loading your chart and conversation…</p>}
+            {status === 'missing' && (
+              <>
+                <p>Astra uses your saved Vedic birth chart to answer questions about your placements and planetary periods.</p>
+                <Link className={styles.primary} href="/birth-form">Create my birth chart <ArrowRight size={16} aria-hidden="true" /></Link>
+              </>
+            )}
+            {status === 'failed' && (
+              <>
+                <p role="alert">{error?.text}</p>
+                {error?.code === 'unauthorized'
+                  ? <Link className={styles.primary} href="/sign-in?redirect_url=%2Fask-astra">Sign in</Link>
+                  : <button className={styles.primary} type="button" onClick={reload}>Try again</button>}
+              </>
+            )}
+            {status === 'ready' && (
+              <>
+                <p>Ask about a placement in your chart or a chapter in your life. Pick a question to get started.</p>
+                <div className={styles.suggestions} aria-label="Suggested questions">
+                  {SUGGESTIONS.map((suggestion) => (
+                    <button key={suggestion} type="button" disabled={sending || locked} onClick={() => {
+                      setInput(suggestion);
+                      editor.current?.focus();
+                    }}>
+                      {suggestion} <ArrowUpRight size={15} aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-          <div>
-            <h1 className="font-display text-sm font-semibold text-text uppercase tracking-widest">Ask Astra AI</h1>
-            <p className="text-[11px] text-secondary mt-0.5">Personalized cosmic dialog with your chart context</p>
+        ) : (
+          <div className={styles.messageList} role="log" aria-label="Conversation">
+            {messages.map((message, index) => (
+              <article key={message.id ?? index} className={styles.message} data-role={message.role}>
+                <h2>{message.role === 'user' ? 'You' : 'Astra'}</h2>
+                {message.role === 'user' ? <p>{message.content}</p> : (
+                  <>
+                    <Markdown content={message.content} />
+                    <div className={styles.messageActions}>
+                      <button type="button" onClick={() => void copy(message.content)}><Copy size={14} aria-hidden="true" /> Copy</button>
+                      <button type="button" onClick={() => void share(message.content)}><Share2 size={14} aria-hidden="true" /> Share</button>
+                      {message.id && index === messages.length - 1 && (
+                        <button type="button" disabled={sending} onClick={() => void send('', message.id)}>
+                          <RotateCcw size={14} aria-hidden="true" /> Regenerate
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </article>
+            ))}
+            {pendingQuestion && <article className={styles.message} data-role="user"><h2>You</h2><p>{pendingQuestion}</p></article>}
+            {sending && <p className={styles.status} role="status">Astra is preparing a response…</p>}
           </div>
-        </div>
-        {messages.length > 0 && (
-          <button
-            onClick={handleClear}
-            className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase text-secondary/60 transition hover:text-red-400"
-            title="Reset conversation"
-          >
-            <Trash2 size={13} />
-            Reset
-          </button>
         )}
       </div>
 
-      {/* Message Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        <AnimatePresence initial={false}>
-          {messages.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex h-full flex-col justify-center space-y-8"
-            >
-              <div className="text-center max-w-md mx-auto space-y-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-gold/80 flex items-center justify-center gap-2">
-                  <Sparkles size={12} className="opacity-60" /> Cosmic Oracle
-                </p>
-                <h2 className="font-display text-3xl font-medium text-text tracking-tight">How can Astra guide you today?</h2>
-                <p className="text-[14px] text-secondary leading-relaxed">
-                  Ask about career, love, relationships, life chapters or health. Your birth chart data is automatically enriched with every prompt.
-                </p>
-              </div>
-
-              {/* Suggestions */}
-              <div className="grid gap-3 sm:grid-cols-2 max-w-xl mx-auto w-full">
-                {SUGGESTIONS.map((s, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSend(s.text)}
-                    className="group flex flex-col items-start rounded-[16px] border border-white/5 bg-surface-hover p-5 text-left transition hover:border-gold/30 hover:bg-gold/5"
-                  >
-                    <span className="text-[10px] uppercase tracking-wider text-gold/70 mb-2">{s.category}</span>
-                    <span className="text-[13px] text-secondary group-hover:text-text transition-colors leading-snug">{s.text}</span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {messages.map((m, idx) => {
-            const isUser = m.role === 'user';
-            return (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: 'easeOut' }}
-                className={`flex items-start gap-4 ${isUser ? 'justify-end' : ''}`}
-              >
-                {!isUser && (
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-gold/10 bg-gold/5 text-gold">
-                    <Bot size={16} />
-                  </div>
-                )}
-                <div
-                  className={`rounded-[20px] px-6 py-5 text-[15px] leading-relaxed max-w-[85%] ${
-                    isUser
-                      ? 'border border-white/5 bg-surface-hover text-text rounded-tr-sm'
-                      : 'border-none bg-transparent text-secondary'
-                  }`}
-                >
-                  {isUser ? (
-                    <p className="whitespace-pre-wrap text-[14px]">{m.content}</p>
-                  ) : (
-                    <div className="text-[15px] prose-a:text-gold prose-strong:text-text text-secondary max-w-none">
-                      <Markdown content={m.content} />
-                    </div>
-                  )}
-
-                  {/* Actions & Timestamp row */}
-                  <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2 text-[10px] text-[#B8BCC8]/40">
-                    <span>{m.timestamp}</span>
-                    {!isUser && (
-                      <div className="flex items-center gap-3 ml-4">
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(m.content)}
-                          className="flex items-center gap-1 hover:text-[#D4AF37] transition duration-150"
-                          title="Copy response"
-                        >
-                          <Copy size={10} />
-                          Copy
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleShare(m.content)}
-                          className="flex items-center gap-1 hover:text-[#D4AF37] transition duration-150"
-                          title="Share response"
-                        >
-                          <Share2 size={10} />
-                          Share
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRegenerate(idx)}
-                          className="flex items-center gap-1 hover:text-[#D4AF37] transition duration-150"
-                          title="Regenerate response"
-                        >
-                          <RotateCcw size={10} />
-                          Regenerate
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {isUser && (
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-[#B8BCC8]">
-                    <User size={15} />
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
-
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-start gap-3.5"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37]">
-                <Bot size={15} />
-              </div>
-              <div className="flex items-center gap-1.5 rounded-2xl border border-white/10 bg-black/30 px-4 py-4">
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#D4AF37] [animation-delay:-0.3s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#D4AF37] [animation-delay:-0.15s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#D4AF37]" />
-              </div>
-            </motion.div>
-          )}
-
+      {status === 'ready' && (
+        <form className={styles.composer} onSubmit={(event) => { event.preventDefault(); void send(input); }}>
           {error && (
-            <div className="flex flex-col gap-3 rounded-2xl border border-red-400/20 bg-red-400/8 p-4 text-xs text-red-400">
-              <div className="flex items-start gap-2.5">
-                <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-              {isLocked && (
-                <div className="mt-1">
-                  <Link
-                    href="/dashboard/billing"
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#D4AF37] px-4 py-2 text-xs font-bold text-black hover:bg-[#D4AF37]/90 transition"
-                  >
-                    Upgrade to ASTRA PRO
-                    <ArrowRight size={12} />
-                  </Link>
-                </div>
-              )}
+            <div className={styles.error} role="alert">
+              {error.text}
+              {locked && <Link href="/dashboard/billing">View plans</Link>}
+              {error.code === 'chart_not_found' && <Link href="/birth-form">Create chart</Link>}
+              {error.code === 'unauthorized' && <Link href="/sign-in?redirect_url=%2Fask-astra">Sign in</Link>}
+              {error.code === 'session_changed' && <button type="button" onClick={reload}>Reload conversation</button>}
+              {error.code === 'session_not_found' && <button type="button" onClick={newConversation}>Start a new chat</button>}
             </div>
           )}
-        </AnimatePresence>
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Form */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSend(input);
-        }}
-        className="relative z-10 flex items-center gap-3 border-t border-white/5 bg-background/50 p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl"
-      >
-        <div className="relative flex-1 group">
-          <input
-            value={input}
-            disabled={isLocked || loading}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={isLocked ? "Chat locked. Please upgrade to continue." : "Ask Astra about your chart..."}
-            className="w-full rounded-[16px] border border-white/10 bg-surface px-4 sm:px-5 py-3.5 sm:py-4 text-base sm:text-sm text-text placeholder-secondary/50 outline-none transition-all focus:border-gold/30 focus:bg-surface-hover focus:shadow-[0_0_20px_rgba(212,175,55,0.05)] disabled:opacity-50"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={!input.trim() || loading || isLocked}
-          className="flex h-[48px] w-[48px] sm:h-[54px] sm:w-[54px] flex-shrink-0 items-center justify-center rounded-[16px] bg-gold text-black shadow-goldGlow transition-all hover:bg-gold-muted hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:shadow-none disabled:hover:scale-100"
-        >
-          <Send size={18} />
-        </button>
-      </form>
-    </div>
+          <div className={styles.composerRow}>
+            <textarea
+              ref={editor}
+              aria-label="Your question for Astra"
+              placeholder="Ask about your chart…"
+              value={input}
+              rows={1}
+              maxLength={1500}
+              disabled={locked}
+              readOnly={sending}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault();
+                  void send(input);
+                }
+              }}
+            />
+            <button className={styles.primary} type="submit" aria-label="Send question" disabled={!input.trim() || sending || locked}>
+              <ArrowUp size={21} aria-hidden="true" />
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
