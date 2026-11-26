@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Sparkles, Menu } from 'lucide-react';
+import { Sparkles, Menu } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -52,21 +52,15 @@ export function DashboardTopbar({ onOpenMobile }: { onOpenMobile?: () => void })
         </div>
 
         {/* Ask Astra shortcut */}
-        <Link
-          href="/ask-astra"
-          className="hidden sm:flex items-center gap-2 rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/8 px-3 py-1.5 text-xs font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
-        >
-          <Sparkles size={12} />
-          Ask Astra
-        </Link>
-
-        {/* Notifications placeholder */}
-        <button
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[#B8BCC8] transition hover:text-white md:h-9 md:w-9"
-          title="Notifications"
-        >
-          <Bell size={14} />
-        </button>
+        {pathname !== '/ask-astra' && (
+          <Link
+            href="/ask-astra"
+            className="hidden sm:flex items-center gap-2 rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/8 px-3 py-1.5 text-xs font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
+          >
+            <Sparkles size={12} />
+            Ask Astra
+          </Link>
+        )}
 
         {/* Clerk user button */}
         <UserButton

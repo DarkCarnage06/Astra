@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/payment/webhook(.*)',
   '/robots.txt',
   '/sitemap.xml',
+  '/manifest.json',
 ]);
 
 /**

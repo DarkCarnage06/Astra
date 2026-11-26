@@ -1,445 +1,208 @@
-/**
- * app/api/ask/route.ts
- * AI Chat API Route for Ask Astra.
- * Detects intent, loads corresponding template, generates context, and returns streamed response.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { getOpenRouterClient } from '../../../services/ai/openrouter';
+import { getOpenRouterClient, type ChatMessage } from '../../../services/ai/openrouter';
 import { buildChartContext } from '../../../prompts/system';
 import { db } from '../../../lib/db';
 import { MODEL_SETTINGS } from '../../../config/models';
-import { PROMPT_TEMPLATES } from './prompts';
 import { PAYMENTS_ENABLED } from '../../../config/payments';
+import type { ChartResponse } from '../../../lib/types/chart';
+import { PROMPT_TEMPLATES } from './prompts';
 
 export const dynamic = 'force-dynamic';
-
-/**
- * Increase Vercel function timeout to 60s (Pro) / 10s (Hobby).
- * Set this to 60 on Pro plan. Hobby plan ignores values above 10.
- * This prevents the Vercel platform from killing the function before
- * the OpenRouter AI response arrives.
- */
 export const maxDuration = 60;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const MAX_MESSAGE_LENGTH = 1500;
+const HISTORY_TURNS = 16;
+const messageOrder = [{ createdAt: 'desc' }, { id: 'desc' }] as const;
+const messageFields = { id: true, role: true, content: true } as const;
 
-function classifyIntent(message: string): string {
-  const msg = message.toLowerCase();
-  if (/\b(job|work|career|business|profession|boss|office|promotion|employ|industry|company)\b/i.test(msg)) {
-    return 'career';
-  }
-  if (/\b(love|marry|marriage|relationship|partner|wife|husband|date|romance|compatibility|boyfriend|girlfriend|spouse)\b/i.test(msg)) {
-    return 'relationship';
-  }
-  if (/\b(money|wealth|rich|finance|invest|stock|earn|debt|buy|sell|income|asset|property|cash)\b/i.test(msg)) {
-    return 'finance';
-  }
-  if (/\b(study|exam|college|school|degree|learn|education|course|university|academic|class)\b/i.test(msg)) {
-    return 'education';
-  }
-  if (/\b(health|body|disease|ill|pain|medical|energy|sleep|diet|vitality|sickness|doctor|wellbeing)\b/i.test(msg)) {
-    return 'health';
-  }
-  return 'general';
+const topics = {
+  career: /\b(job|work|career|business|profession|boss|office|promotion|industry|company)\b/i,
+  relationship: /\b(love|marry|marriage|relationships?|partners?|wife|husband|romance|compatibility|spouse)\b/i,
+  finance: /\b(money|wealth|rich|financ(?:e|ial)|invest|stock|earn|debt|income|assets?|property)\b/i,
+  education: /\b(study|exam|college|school|degree|learn|education|course|university)\b/i,
+  health: /\b(health|body|disease|ill|pain|medical|sleep|diet|vitality|doctor|wellbeing)\b/i,
+} satisfies Partial<Record<keyof typeof PROMPT_TEMPLATES, RegExp>>;
+
+function errorResponse(error: string, message: string, status: number) {
+  return NextResponse.json({ error, message }, { status });
 }
 
-function isAstrologyQuestion(message: string): boolean {
-  if (/\b(code|coding|program(?:ming)?|fibonacci|recipe|translate|summari[sz]e this|write an essay|general trivia|solve this equation)\b/i.test(message)) return false;
-  return /\b(astrolog(?:y|ical)|birth chart|natal|transit|kundli|kundali|horoscope|zodiac|planet|rashi|nakshatra|dasha|yoga|panchang|lagna|ascendant|career|job|work|love|marriage|relationship|partner|money|wealth|finance|study|exam|health|life path|timing|family|home|children|purpose|compatibility)\b/i.test(message);
-}
-
-function getTemplateContent(category: string): string {
-  return PROMPT_TEMPLATES[category as keyof typeof PROMPT_TEMPLATES] || '';
-}
-
-// ---------------------------------------------------------------------------
-// ENV verification (no external dependency, inline for safety)
-// ---------------------------------------------------------------------------
-
-function checkEnvVars(): void {
-  const required = [
-    'DATABASE_URL',
-    'CLERK_SECRET_KEY',
-    'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-    'OPENROUTER_API_KEY',
-  ];
-
-  const missing = required.filter((k) => !process.env[k]);
-  if (missing.length > 0) {
-    throw new Error(`[ASK ASTRA] Missing required environment variables: ${missing.join(', ')}`);
-  }
-
-  const dbUrl = process.env.DATABASE_URL!;
-  if (!dbUrl.startsWith('postgres')) {
-    throw new Error(`[ASK ASTRA] DATABASE_URL is malformed. Expected postgresql://... got: ${dbUrl.slice(0, 30)}...`);
-  }
-
-  console.log('[ASK ASTRA] ENV CHECK PASSED — all required variables present');
-}
-
-// ---------------------------------------------------------------------------
-// GET — load chat history
-// ---------------------------------------------------------------------------
-
-export async function GET(request: NextRequest) {
-  console.log('[ASK ASTRA] GET /api/ask — loading history');
-
-  // Step 1: Env check
+export async function GET() {
   try {
-    checkEnvVars();
-  } catch (envErr) {
-    console.error('[ASK ASTRA] ENV ERROR in GET:', envErr);
-    return NextResponse.json({ error: 'configuration_error', message: String(envErr) }, { status: 500 });
-  }
+    const { userId } = await auth();
+    if (!userId) return errorResponse('unauthorized', 'Sign in to open Ask Astra.', 401);
 
-  // Step 2: Auth check
-  let clerkId: string;
-  try {
-    const mockHeader = request.headers.get('x-mock-clerk-id');
-    if (mockHeader && process.env.NODE_ENV === 'development') {
-      clerkId = mockHeader;
-      console.log(`[ASK ASTRA] GET MOCK AUTH PASSED — clerkId: ${clerkId}`);
-    } else {
-      const { userId } = await auth();
-      if (!userId) {
-        console.warn('[ASK ASTRA] GET — unauthenticated request');
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      clerkId = userId;
-      console.log(`[ASK ASTRA] GET — authenticated clerkId: ${clerkId.slice(0, 12)}...`);
-    }
-  } catch (authErr) {
-    console.error('[ASK ASTRA] Auth error in GET:', authErr);
-    return NextResponse.json({ error: 'auth_error', message: String(authErr) }, { status: 401 });
-  }
-
-  // Step 3: DB lookup
-  try {
-    const user = await db.user.findUnique({ where: { clerkId } });
-    if (!user) {
-      console.log('[ASK ASTRA] GET — user not found in DB, returning empty history');
-      return NextResponse.json({ messages: [], sessionId: null });
-    }
-
-    const session = await db.chatSession.findFirst({
-      where: { userId: user.id },
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        messages: { orderBy: { createdAt: 'asc' } },
+    const user = await db.user.findUnique({
+      where: { clerkId: userId },
+      select: {
+        birthDetail: { select: { id: true } },
+        birthChart: { select: { id: true } },
+        chatSessions: {
+          take: 1,
+          orderBy: { updatedAt: 'desc' },
+          select: {
+            id: true,
+            messages: { orderBy: [...messageOrder], select: messageFields },
+          },
+        },
       },
     });
 
-    if (!session) {
-      console.log('[ASK ASTRA] GET — no chat session found, returning empty history');
-      return NextResponse.json({ messages: [], sessionId: null });
-    }
-
-    const messages = session.messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    console.log(`[ASK ASTRA] GET — returning ${messages.length} messages from session ${session.id}`);
-    return NextResponse.json({ messages, sessionId: session.id });
-  } catch (dbErr) {
-    console.error('[ASK ASTRA] DB error in GET:', dbErr);
-    return NextResponse.json({ error: 'failed_to_load_history', message: String(dbErr) }, { status: 500 });
+    const session = user?.chatSessions[0];
+    return NextResponse.json({
+      hasChart: Boolean(user?.birthDetail && user.birthChart),
+      sessionId: session?.id ?? null,
+      messages: session?.messages.reverse() ?? [],
+    });
+  } catch (error) {
+    console.error('[Ask Astra] History lookup failed', error instanceof Error ? error.name : undefined);
+    return errorResponse('history_unavailable', 'Your chart and conversation could not be loaded. Please try again.', 500);
   }
 }
 
-// ---------------------------------------------------------------------------
-// POST — send message and get AI response
-// ---------------------------------------------------------------------------
+class StaleConversationError extends Error {}
+class QuestionLimitError extends Error {}
 
 export async function POST(request: NextRequest) {
-  console.log('[ASK ASTRA] ========== START REQUEST ==========');
-  const startTime = Date.now();
-
-  // ── STEP 1: ENV CHECK ──
-  try {
-    checkEnvVars();
-  } catch (envErr) {
-    console.error('[ASK ASTRA] STEP 1 FAILED — ENV CHECK:', String(envErr));
-    return NextResponse.json(
-      { error: 'configuration_error', message: String(envErr) },
-      { status: 500 }
-    );
+  const body = await request.json().catch(() => null);
+  if (
+    !body ||
+    (body.sessionId != null && (typeof body.sessionId !== 'string' || body.sessionId.length > 100)) ||
+    (body.replaceReplyId != null && (typeof body.replaceReplyId !== 'string' || !body.replaceReplyId || body.replaceReplyId.length > 100 || !body.sessionId)) ||
+    (body.replaceReplyId == null && (typeof body.message !== 'string' || !body.message.trim() || body.message.length > MAX_MESSAGE_LENGTH))
+  ) {
+    return errorResponse('invalid_request', 'Enter a question of up to 1,500 characters.', 400);
   }
 
-  // ── STEP 2: AUTH ──
-  let clerkId: string;
   try {
-    const mockHeader = request.headers.get('x-mock-clerk-id');
-    if (mockHeader && process.env.NODE_ENV === 'development') {
-      clerkId = mockHeader;
-      console.log(`[ASK ASTRA] MOCK AUTH PASSED — clerkId: ${clerkId}`);
-    } else {
-      const { userId } = await auth();
-      if (!userId) {
-        console.error('[ASK ASTRA] STEP 2 FAILED — no userId returned from auth()');
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      clerkId = userId;
-      console.log(`[ASK ASTRA] STEP 2 PASSED — authenticated clerkId: ${clerkId.slice(0, 12)}...`);
-    }
-  } catch (authErr) {
-    console.error('[ASK ASTRA] STEP 2 FAILED — auth() threw:', String(authErr));
-    return NextResponse.json({ error: 'auth_error', message: String(authErr) }, { status: 401 });
-  }
+    const { userId } = await auth();
+    if (!userId) return errorResponse('unauthorized', 'Sign in to send your question.', 401);
 
-  // ── STEP 2.5: PLAN CHECK & LIFETIME QUESTION LIMITS ──
-  try {
     const user = await db.user.findUnique({
-      where: { clerkId },
-      select: { id: true, plan: true }
-    });
-
-    if (PAYMENTS_ENABLED && user && user.plan === 'FREE') {
-      const userMessageCount = await db.chatMessage.count({
-        where: {
-          session: {
-            userId: user.id
-          },
-          role: 'user'
-        }
-      });
-
-      console.log(`[ASK ASTRA] Limit Check — FREE user has asked ${userMessageCount} user questions.`);
-      if (userMessageCount >= 5) {
-        console.warn(`[ASK ASTRA] User ${user.id} has reached free lifetime limit.`);
-        return NextResponse.json(
-          {
-            error: 'limit_reached',
-            message: "You've used your free questions. Upgrade to ASTRA PRO to continue."
-          },
-          { status: 403 }
-        );
-      }
-    }
-  } catch (err) {
-    console.error('[ASK ASTRA] Limit check database query failed:', err);
-  }
-
-  // ── STEP 3: PARSE REQUEST BODY ──
-  let message: string;
-  let history: { role: 'user' | 'assistant'; content: string }[];
-  let birth: unknown;
-  let chart: unknown;
-  let sessionId: string | null;
-
-  try {
-    const body = await request.json();
-    message = body.message;
-    history = body.history ?? [];
-    birth = body.birth;
-    chart = body.chart;
-    sessionId = body.sessionId ?? null;
-
-    console.log(`[ASK ASTRA] STEP 3 PASSED — message: "${String(message).slice(0, 60)}...", history length: ${history.length}`);
-    console.log(`[ASK ASTRA] STEP 3 — birth present: ${!!birth}, chart present: ${!!chart}, sessionId: ${sessionId}`);
-  } catch (parseErr) {
-    console.error('[ASK ASTRA] STEP 3 FAILED — request.json() threw:', String(parseErr));
-    return NextResponse.json(
-      { error: 'parse_error', message: `[ASK ASTRA] request body parse failed: ${String(parseErr)}` },
-      { status: 400 }
-    );
-  }
-
-  if (!message) {
-    console.error('[ASK ASTRA] STEP 3 FAILED — validation: missing message, birth, or chart');
-    return NextResponse.json(
-      { error: 'invalid_request', message: 'Message, birth details and birth chart are required.' },
-      { status: 400 }
-    );
-  }
-
-  // A deterministic server-side gate keeps Ask Astra in its astrology domain.
-  if (!isAstrologyQuestion(message)) {
-    return NextResponse.json({
-      content: 'I am Astra, your personal astrology guide. I can help with questions about your birth chart, planetary timing, and how these relate to your life. What would you like to explore?',
-      sessionId,
-      category: 'out_of_scope',
-    });
-  }
-
-  // Never trust chart data supplied by the browser for a personalized reading.
-  try {
-    const user = await db.user.findUnique({
-      where: { clerkId },
+      where: { clerkId: userId },
       include: { birthDetail: true, birthChart: true },
     });
-    if (user?.birthDetail && user.birthChart) {
-      birth = {
-        name: user.birthDetail.name,
-        date: user.birthDetail.date,
-        time: user.birthDetail.time ?? '',
-        knownTime: user.birthDetail.knownTime,
-        place: user.birthDetail.place,
-        displayPlace: user.birthDetail.displayPlace ?? undefined,
-        latitude: user.birthDetail.latitude ?? undefined,
-        longitude: user.birthDetail.longitude ?? undefined,
-        timezone: user.birthDetail.timezone ?? undefined,
-      };
-      chart = user.birthChart.chartJson;
+    if (!user?.birthDetail || !user.birthChart) {
+      return errorResponse('chart_not_found', 'Create your birth chart before asking a question.', 400);
     }
-  } catch (err) {
-    console.error('[ASK ASTRA] Could not load saved chart:', err);
-  }
-  if (!birth || !chart) {
-    return NextResponse.json({ error: 'chart_not_found', message: 'Please save your birth details and generate your chart before asking for a personalized reading.' }, { status: 400 });
-  }
 
-  // ── STEP 4: BUILD PROMPT ──
-  let finalSystemPrompt: string;
-  let userContent: string;
-  let category: string;
+    const session = body.sessionId
+      ? await db.chatSession.findFirst({
+          where: { id: body.sessionId, userId: user.id },
+          include: { messages: { orderBy: [...messageOrder], take: HISTORY_TURNS } },
+        })
+      : null;
+    if (body.sessionId && !session) {
+      return errorResponse('session_not_found', 'This conversation is unavailable. Start a new chat to continue.', 404);
+    }
 
-  try {
-    category = classifyIntent(message);
-    const systemBase = getTemplateContent('system') + '\n\nYou must answer only astrology-related questions, grounded exclusively in the supplied saved birth chart and current transit context. Do not answer unrelated requests, provide code, solve general math, or invent missing chart facts. If a requested detail is absent, say so clearly.';
-    const topicPrompt = getTemplateContent(category);
-    finalSystemPrompt = `${systemBase}\n\n${topicPrompt}`.trim();
+    const recent = session?.messages ?? [];
+    const replaceReplyId = body.replaceReplyId;
+    if (replaceReplyId && (recent[0]?.id !== replaceReplyId || recent[0].role !== 'assistant' || recent[1]?.role !== 'user')) {
+      throw new StaleConversationError();
+    }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const chartContext = buildChartContext(birth as any, chart as any);
-    userContent = `User Question: "${message}"\n\nAstrological Context:\n${chartContext}`;
+    const message = replaceReplyId ? recent[1].content : body.message.trim();
+    const history = (replaceReplyId ? recent.slice(2) : [...recent]).reverse();
+    const topic = (Object.keys(topics) as (keyof typeof topics)[]).find((key) => topics[key].test(message));
+    const astrologyTerms = /\b(astrolog(?:y|ical)|birth chart|my chart|natal|transits?|kundli|kundali|horoscope|zodiac|planets?|moon sign|sun sign|rashi|nakshatra|dashas?|yogas?|panchang|lagna|ascendant|life path|timing|family|home|children|purpose)\b/i;
+    const unrelated = /\b(code|coding|program(?:ming)?|fibonacci|recipe|translate|summari[sz]e this|write an essay|general trivia|solve this equation)\b/i;
 
-    console.log(`[ASK ASTRA] STEP 4 PASSED — category: ${category}, systemPrompt length: ${finalSystemPrompt.length}, userContent length: ${userContent.length}`);
-  } catch (promptErr) {
-    console.error('[ASK ASTRA] STEP 4 FAILED — prompt/context build threw:', String(promptErr));
-    return NextResponse.json(
-      { error: 'prompt_build_error', message: `[ASK ASTRA] prompt build failed: ${String(promptErr)}` },
-      { status: 500 }
-    );
-  }
-
-  // ── STEP 5: PRISMA — SAVE USER MESSAGE ──
-  let activeSessionId: string | null = sessionId;
-  try {
-    const user = await db.user.findUnique({ where: { clerkId } });
-    console.log(`[ASK ASTRA] STEP 5 — DB user lookup: ${user ? `found (id: ${user.id})` : 'NOT FOUND — skipping DB write'}`);
-
-    if (user) {
-      if (!activeSessionId) {
-        const newSession = await db.chatSession.create({
-          data: {
-            userId: user.id,
-            title: message.slice(0, 40) + '...',
-          },
-        });
-        activeSessionId = newSession.id;
-        console.log(`[ASK ASTRA] STEP 5 — created new ChatSession: ${activeSessionId}`);
-      }
-
-      await db.chatMessage.create({
-        data: {
-          sessionId: activeSessionId,
-          role: 'user',
-          content: message,
-        },
+    if (unrelated.test(message) || (!topic && !astrologyTerms.test(message) && !history.length)) {
+      return NextResponse.json({
+        reply: { role: 'assistant', content: 'I can help you explore your birth chart, planetary periods, and the patterns they suggest. Try asking about a placement in your chart or a theme in your life.' },
+        sessionId: session?.id ?? null,
       });
-      console.log(`[ASK ASTRA] STEP 5 PASSED — user message saved to session ${activeSessionId}`);
     }
-  } catch (dbErr) {
-    // DB write failure is non-fatal — log it but do NOT return 500
-    console.error('[ASK ASTRA] STEP 5 WARNING — DB write failed (non-fatal, continuing):', String(dbErr));
-    console.error('[ASK ASTRA] STEP 5 — DB error details:', dbErr);
-  }
 
-  // ── STEP 6: OPENROUTER AI REQUEST ──
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    console.error('[ASK ASTRA] STEP 6 FAILED — OPENROUTER_API_KEY is not set');
-    return NextResponse.json(
-      { error: 'configuration_error', message: '[ASK ASTRA] OPENROUTER_API_KEY is missing' },
-      { status: 500 }
-    );
-  }
+    const isLimited = PAYMENTS_ENABLED && user.plan === 'FREE' && !replaceReplyId;
+    const questionFilter = { session: { userId: user.id }, role: 'user' };
+    if (isLimited && await db.chatMessage.count({ where: questionFilter }) >= 5) {
+      throw new QuestionLimitError();
+    }
 
-  const apiMessages = [
-    { role: 'system' as const, content: finalSystemPrompt },
-    ...history.map((h) => ({ role: h.role, content: h.content })),
-    { role: 'user' as const, content: userContent },
-  ];
-
-  console.log(`[ASK ASTRA] STEP 6 — sending to OpenRouter. Model: ${process.env.OPENROUTER_MODEL ?? 'meta-llama/llama-3.3-70b-instruct'}`);
-  console.log(`[ASK ASTRA] STEP 6 — messages count: ${apiMessages.length}, maxTokens: ${MODEL_SETTINGS.maxTokensSummary}`);
-  console.log(`[ASK ASTRA] STEP 6 — API key prefix: ${apiKey.slice(0, 16)}...`);
-
-  let aiResponseContent: string;
-  try {
-    const client = getOpenRouterClient();
-    const response = await client.complete({
-      messages: apiMessages,
+    const birth = user.birthDetail;
+    const chart = user.birthChart.chartJson as unknown as ChartResponse;
+    const chartContext = buildChartContext({
+      ...birth,
+      time: birth.time ?? '',
+      displayPlace: birth.displayPlace ?? undefined,
+      latitude: birth.latitude ?? undefined,
+      longitude: birth.longitude ?? undefined,
+      timezone: birth.timezone ?? undefined,
+    }, chart);
+    const system = [
+      PROMPT_TEMPLATES.system,
+      PROMPT_TEMPLATES[topic ?? 'general'],
+      'Stay within astrology and self-reflection. Ground the answer in the supplied chart. Say when a chart detail is unavailable.',
+    ].join('\n\n');
+    const response = await getOpenRouterClient().complete({
+      messages: [
+        { role: 'system', content: system },
+        ...history.flatMap<ChatMessage>(({ role, content }) => role === 'user' || role === 'assistant' ? [{ role, content }] : []),
+        { role: 'user', content: `Astrological context:\n${chartContext}\n\nQuestion: ${message}` },
+      ],
       maxTokens: MODEL_SETTINGS.maxTokensSummary,
     });
 
-    aiResponseContent = response.content;
-    console.log(`[ASK ASTRA] STEP 6 PASSED — OpenRouter responded. model: ${response.model}, tokens: ${response.promptTokens}+${response.completionTokens}`);
-    console.log(`[ASK ASTRA] STEP 6 — raw content (first 200 chars): ${aiResponseContent.slice(0, 200)}`);
-  } catch (aiErr) {
-    const errMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
-    const stack = aiErr instanceof Error ? aiErr.stack : undefined;
-    console.error('[ASK ASTRA] STEP 6 FAILED — OpenRouter call threw:');
-    console.error('  Error message:', errMsg);
-    console.error('  Stack:', stack);
-    console.error('  Raw error:', aiErr);
-    return NextResponse.json(
-      {
-        error: 'ai_failed',
-        message: errMsg,
-        ...(process.env.NODE_ENV !== 'production' && { stack }),
-      },
-      { status: 500 }
-    );
-  }
-
-  // ── STEP 7: CLEAN AI RESPONSE ──
-  let cleanText = aiResponseContent;
-  try {
-    const match = aiResponseContent.match(/\{[\s\S]*\}/);
-    if (match) {
-      const parsed = JSON.parse(match[0]);
-      if (parsed.description) {
-        cleanText = parsed.description;
-        console.log(`[ASK ASTRA] STEP 7 — extracted JSON description field`);
-      } else if (parsed.title && !parsed.description) {
-        // JSON has title but no description — use full JSON stringified
-        console.warn('[ASK ASTRA] STEP 7 — JSON had title but no description field, using raw content');
+    let content = response.content.trim();
+    const object = content.match(/\{[\s\S]*\}/);
+    if (object) {
+      try {
+        const parsed = JSON.parse(object[0]);
+        if (typeof parsed.description === 'string' && parsed.description.trim()) content = parsed.description.trim();
+      } catch {
+        // Plain text can contain braces.
       }
     }
-  } catch {
-    // Not JSON — use raw string as-is
-    console.log('[ASK ASTRA] STEP 7 — response is plain text, using as-is');
-  }
+    if (!content) return errorResponse('empty_reply', 'Astra returned an empty reply. Try sending your question again.', 502);
 
-  // ── STEP 8: PRISMA — SAVE ASSISTANT RESPONSE ──
-  if (activeSessionId) {
-    try {
-      await db.chatMessage.create({
-        data: {
-          sessionId: activeSessionId,
-          role: 'assistant',
-          content: cleanText,
-        },
-      });
-      console.log(`[ASK ASTRA] STEP 8 PASSED — assistant response saved to session ${activeSessionId}`);
-    } catch (dbErr) {
-      // DB write failure is non-fatal — response already ready to return
-      console.error('[ASK ASTRA] STEP 8 WARNING — assistant message DB save failed (non-fatal):', String(dbErr));
+    const saved = await db.$transaction(async (tx) => {
+      if (isLimited) {
+        // Serialize free-tier writes for the same account before checking the quota again.
+        await tx.user.update({ where: { id: user.id }, data: { updatedAt: new Date() } });
+        if (await tx.chatMessage.count({ where: questionFilter }) >= 5) throw new QuestionLimitError();
+      }
+
+      const now = new Date(Math.max(Date.now(), (session?.updatedAt.getTime() ?? 0) + 2));
+      let sessionId: string;
+      if (session) {
+        const updated = await tx.chatSession.updateMany({
+          where: { id: session.id, userId: user.id, updatedAt: session.updatedAt },
+          data: { updatedAt: now },
+        });
+        if (!updated.count) throw new StaleConversationError();
+        sessionId = session.id;
+      } else {
+        const created = await tx.chatSession.create({
+          data: { userId: user.id, title: message.slice(0, 40), createdAt: now, updatedAt: now },
+        });
+        sessionId = created.id;
+      }
+
+      if (!replaceReplyId) {
+        await tx.chatMessage.create({ data: { sessionId, role: 'user', content: message, createdAt: now } });
+      }
+
+      const reply = replaceReplyId
+        ? await tx.chatMessage.update({ where: { id: replaceReplyId, sessionId }, data: { content }, select: messageFields })
+        : await tx.chatMessage.create({
+            data: { sessionId, role: 'assistant', content, createdAt: new Date(now.getTime() + 1) },
+            select: messageFields,
+          });
+      return { reply, sessionId };
+    });
+
+    return NextResponse.json(saved);
+  } catch (error) {
+    if (error instanceof StaleConversationError) {
+      return errorResponse('session_changed', 'This conversation changed. Reload it to continue.', 409);
     }
+    if (error instanceof QuestionLimitError) {
+      return errorResponse('limit_reached', 'You’ve used your free questions.', 403);
+    }
+    console.error('[Ask Astra] Request failed', error instanceof Error ? error.name : undefined);
+    return errorResponse('reply_unavailable', 'Astra could not answer right now. Please try again.', 502);
   }
-
-  const elapsed = Date.now() - startTime;
-  console.log(`[ASK ASTRA] ========== REQUEST COMPLETE in ${elapsed}ms ==========`);
-
-  return NextResponse.json({
-    content: cleanText,
-    sessionId: activeSessionId,
-    category,
-  });
 }
